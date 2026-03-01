@@ -1,7 +1,7 @@
 import { prisma } from "./lib/prisma.js";
 
 async function main() {
-  const users = await prisma.user.findMany();
+  const users = await prisma.userAuth.findMany();
   console.log("Users:", users);
 }
 
