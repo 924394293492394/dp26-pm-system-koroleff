@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//-------------------01/03/2026------------------------
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model UserAuth {
+  id        String     @id @default(uuid())
+  login     String     @unique
+  email     String     @unique
+  password  String
+  role      UserRole   @default(USER)
+  createdAt DateTime   @default(now())
+
+  profile        UserProfile?
+  createdProjects Project[]    @relation("ProjectCreator")
+  createdTasks    Task[]       @relation("TaskCreator")
+  assignedTasks   Task[]       @relation("AssignedTasks")
+  createdGoals    Goal[]       @relation("GoalCreator")
+  responsibleGoals Goal[]      @relation("GoalResponsible")
+  comments        Comment[]
+  memberships     ProjectMember[]
+}
+
+model UserProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  firstName  String
+  lastName   String
+  position   String?
+  avatarUrl  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       UserAuth @relation(fields: [userId], references: [id])
+}
+
+model Project {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  isArchived  Boolean   @default(false)
+  isDeleted   Boolean   @default(false)
+
+  creator     UserAuth  @relation("ProjectCreator", fields: [createdBy], references: [id])
+  members     ProjectMember[]
+  goals       Goal[]
+  tasks       Task[]
+
+  @@index([createdBy])
+}
+
+enum ProjectRole {
+  MEMBER
+  PROJECT_MANAGER
+  TEAM_LEAD
+  DEVELOPER
+  QA
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String      
+  userId    String      
+  role      ProjectRole @default(MEMBER)
+  joinedAt  DateTime    @default(now())
+
+  project   Project     @relation(fields: [projectId], references: [id])
+  user      UserAuth    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+enum GoalStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Goal {
+  id                 String     @id @default(uuid())
+  projectId          String
+  createdBy          String
+  responsibleUserId  String?
+  title              String
+  description        String?
+  dueDate            DateTime?
+  status             GoalStatus @default(PLANNED)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  isDeleted          Boolean    @default(false)
+
+  project        Project   @relation(fields: [projectId], references: [id])
+  creator        UserAuth  @relation("GoalCreator", fields: [createdBy], references: [id])
+  responsible    UserAuth? @relation("GoalResponsible", fields: [responsibleUserId], references: [id])
+  tasks          Task[]
+
+  @@index([projectId])
+  @@index([createdBy])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  projectId   String
+  goalId      String?
+  createdBy   String
+  assignedTo  String?
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  isDeleted   Boolean      @default(false)
+
+  project   Project   @relation(fields: [projectId], references: [id])
+  goal      Goal?     @relation(fields: [goalId], references: [id])
+  creator   UserAuth  @relation("TaskCreator", fields: [createdBy], references: [id])
+  assignee  UserAuth? @relation("AssignedTasks", fields: [assignedTo], references: [id])
+  comments  Comment[]
+
+  @@index([projectId])
+  @@index([goalId])
+  @@index([createdBy])
+  @@index([assignedTo])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  issueId   String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
+
+  issue Task     @relation(fields: [issueId], references: [id])
+  user  UserAuth @relation(fields: [userId], references: [id])
+
+  @@index([issueId])
+  @@index([userId])
+}
