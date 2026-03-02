@@ -3,6 +3,8 @@ import cors from 'cors'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { projectRouter } from './modules/project/project.routes.js'
 import { profileRouter } from './modules/profile/profile.routes.js'
+import { projectMemberRouter } from './modules/project-member/project-member.routes.js'
+import { goalRouter } from './modules/goal/goal.routes.js'
 
 export const app = express()
 
@@ -14,5 +16,7 @@ app.get('/health', (_, res) => {
 })
 
 app.use('/auth', authRouter)
-app.use('/projects', projectRouter)
 app.use('/profile', profileRouter)
+app.use('/projects', projectRouter)
+app.use('/projects', projectMemberRouter)
+app.use('/projects', goalRouter)
