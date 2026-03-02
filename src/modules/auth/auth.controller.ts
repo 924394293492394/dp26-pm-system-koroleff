@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
-import { AuthService } from './auth.service.js'
+import AuthService from './auth.service.js' // Теперь это default импорт
+import { AuthRequest } from '../../middleware/auth.middleware.js'
 import { registerSchema, loginSchema } from './auth.schema.js'
 
 export class AuthController {
@@ -24,6 +25,15 @@ export class AuthController {
       const result = await AuthService.login(data)
 
       res.json(result)
+    } catch (error: any) {
+      res.status(400).json({ message: error.message })
+    }
+  }
+
+  static async me(req: AuthRequest, res: Response) {
+    try {
+      const user = await AuthService.getMe(req.user!.userId)
+      res.json(user)
     } catch (error: any) {
       res.status(400).json({ message: error.message })
     }

@@ -4,9 +4,9 @@ import { prisma } from '../../lib/prisma.js'
 import { env } from '../../config/env.js'
 import type { RegisterInput, LoginInput } from './auth.schema.js'
 
-export class AuthService {
-
+class AuthService {
   static async register(data: RegisterInput) {
+
     const existing = await prisma.userAuth.findFirst({
       where: {
         OR: [
@@ -22,18 +22,31 @@ export class AuthService {
 
     const hash = await bcrypt.hash(data.password, 10)
 
-    const user = await prisma.userAuth.create({
-      data: {
-        login: data.login,
-        email: data.email,
-        password: hash
-      }
+    const result = await prisma.$transaction(async (tx) => {
+
+      const user = await tx.userAuth.create({
+        data: {
+          login: data.login,
+          email: data.email,
+          password: hash
+        }
+      })
+
+      await tx.userProfile.create({
+        data: {
+          userId: user.id,
+          firstName: data.firstName,
+          lastName: data.lastName
+        }
+      })
+
+      return user
     })
 
     return {
-      id: user.id,
-      login: user.login,
-      email: user.email
+      id: result.id,
+      login: result.login,
+      email: result.email
     }
   }
 
@@ -60,4 +73,25 @@ export class AuthService {
 
     return { token }
   }
+
+  static async getMe(userId: string) {
+    const user = await prisma.userAuth.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        login: true,
+        email: true,
+        role: true,
+        createdAt: true
+      }
+    })
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    return user
+  }
 }
+
+export default AuthService
