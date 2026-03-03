@@ -5,6 +5,7 @@ import { projectRouter } from './modules/project/project.routes.js'
 import { profileRouter } from './modules/profile/profile.routes.js'
 import { projectMemberRouter } from './modules/project-member/project-member.routes.js'
 import { goalRouter } from './modules/goal/goal.routes.js'
+import { taskRouter } from './modules/task/task.routes.js'
 
 export const app = express()
 
@@ -20,3 +21,4 @@ app.use('/profile', profileRouter)
 app.use('/projects', projectRouter)
 app.use('/projects', projectMemberRouter)
 app.use('/projects', goalRouter)
+app.use('/projects', taskRouter)
