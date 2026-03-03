@@ -156,7 +156,7 @@ model Task {
 
 model Comment {
   id        String   @id @default(uuid())
-  issueId   String
+  issueId   String  //поправить поле taskId, вызвать повторную генерацию
   userId    String
   text      String
   createdAt DateTime @default(now())
