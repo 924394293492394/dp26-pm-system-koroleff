@@ -5,10 +5,37 @@ import {
   addMemberSchema,
   updateMemberSchema,
   projectParamsSchema,
-  memberParamsSchema
+  memberParamsSchema,
+  memberFilterSchema
 } from './project-member.schema.js'
 
 export class ProjectMemberController {
+
+  static async getSystemMembers(req: AuthRequest, res: Response) {
+    try {
+      const data = await ProjectMemberService.getSystemMembers(req.query)
+      res.json(data)
+    } catch (error: any) {
+      res.status(400).json({
+        message: error.message
+      })
+    }
+  }
+
+  static async getMyMembership(req: AuthRequest, res: Response) {
+    const { projectId } = projectParamsSchema.parse(req.params)
+    try {
+      const member = await ProjectMemberService.getMyMembership(
+        projectId,
+        req.user!.userId
+      )
+      res.json(member)
+    } catch (error: any) {
+      res.status(400).json({
+        message: error.message
+      })
+    }
+  }
 
   static async add(req: AuthRequest, res: Response) {
     try {
@@ -23,22 +50,46 @@ export class ProjectMemberController {
 
       res.status(201).json(member)
     } catch (error: any) {
-      res.status(400).json({ message: error.message })
+      res.status(400).json({
+        message: error.message
+      })
     }
   }
 
   static async getAll(req: AuthRequest, res: Response) {
     try {
       const { projectId } = projectParamsSchema.parse(req.params)
+      const filters = memberFilterSchema.parse(req.query)
 
       const members = await ProjectMemberService.getAll(
         projectId,
-        req.user!.userId
+        req.user!.userId,
+        filters
       )
 
       res.json(members)
     } catch (error: any) {
-      res.status(400).json({ message: error.message })
+      res.status(400).json({
+        message: error.message
+      })
+    }
+  }
+
+  static async getOne(req: AuthRequest, res: Response) {
+    try {
+      const { projectId, userId } = memberParamsSchema.parse(req.params)
+
+      const member = await ProjectMemberService.getOne(
+        projectId,
+        req.user!.userId,
+        userId
+      )
+
+      res.json(member)
+    } catch (error: any) {
+      res.status(400).json({
+        message: error.message
+      })
     }
   }
 
@@ -47,16 +98,18 @@ export class ProjectMemberController {
       const { projectId, userId } = memberParamsSchema.parse(req.params)
       const data = updateMemberSchema.parse(req.body)
 
-      const updated = await ProjectMemberService.update(
+      const member = await ProjectMemberService.update(
         projectId,
         req.user!.userId,
         userId,
         data
       )
 
-      res.json(updated)
+      res.json(member)
     } catch (error: any) {
-      res.status(400).json({ message: error.message })
+      res.status(400).json({
+        message: error.message
+      })
     }
   }
 
@@ -72,7 +125,26 @@ export class ProjectMemberController {
 
       res.status(204).send()
     } catch (error: any) {
-      res.status(400).json({ message: error.message })
+      res.status(400).json({
+        message: error.message
+      })
+    }
+  }
+
+  static async leaveProject(req: AuthRequest, res: Response) {
+    try {
+      const { projectId } = projectParamsSchema.parse(req.params)
+
+      await ProjectMemberService.leaveProject(
+        projectId,
+        req.user!.userId
+      )
+
+      res.status(204).send()
+    } catch (error: any) {
+      res.status(400).json({
+        message: error.message
+      })
     }
   }
 }

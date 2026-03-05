@@ -7,9 +7,9 @@ const taskRouter = Router()
 taskRouter.use(authMiddleware)
 
 taskRouter.get(
-  '/system/tasks',
-  requireRole(['ADMIN', 'SUPER_ADMIN']),
-  TaskController.getSystemTasks
+    '/system/tasks',
+    requireRole(['ADMIN', 'SUPER_ADMIN']),
+    TaskController.getSystemTasks
 )
 taskRouter.get('/:projectId/tasks/my', TaskController.getMyTasksInProject)
 taskRouter.post('/:projectId/tasks', TaskController.create)

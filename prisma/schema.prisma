@@ -64,11 +64,10 @@ model Project {
 }
 
 enum ProjectRole {
-  MEMBER
-  PROJECT_MANAGER
-  TEAM_LEAD
-  DEVELOPER
-  QA
+  OWNER
+  MANAGER
+  MEMBER //default
+  VIEWER
 }
 
 model ProjectMember {
