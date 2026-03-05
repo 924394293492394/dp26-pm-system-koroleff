@@ -7,6 +7,7 @@ import { projectMemberRouter } from './modules/project-member/project-member.rou
 import { goalRouter } from './modules/goal/goal.routes.js'
 import { taskRouter } from './modules/task/task.routes.js'
 import { commentRouter } from './modules/comment/comment.routes.js'
+import { errorHandler, notFoundHandler } from './middleware/error.middleware.js'
 
 export const app = express()
 
@@ -24,3 +25,7 @@ app.use('/projects', projectMemberRouter)
 app.use('/projects', goalRouter)
 app.use('/projects', taskRouter)
 app.use('/projects', commentRouter)
+
+// error handler v1
+app.use(notFoundHandler) //404
+app.use(errorHandler) //глобал

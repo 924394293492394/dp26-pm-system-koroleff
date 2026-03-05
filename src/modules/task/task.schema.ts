@@ -28,5 +28,21 @@ export const updateTaskSchema = z.object({
   assignedTo: z.string().uuid().nullable().optional()
 })
 
+export const paginationSchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(10)
+})
+
+export const taskFilterSchema = z.object({
+  status: z.nativeEnum(TaskStatus).optional(),
+  priority: z.nativeEnum(TaskPriority).optional(),
+  assignedTo: z.string().uuid().optional(),
+  goalId: z.string().uuid().optional(),
+  search: z.string().optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(10)
+})
+
 export type CreateTaskInput = z.infer<typeof createTaskSchema>
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>
+export type TaskFilterInput = z.infer<typeof taskFilterSchema>

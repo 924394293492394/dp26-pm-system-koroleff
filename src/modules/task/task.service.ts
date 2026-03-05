@@ -1,25 +1,24 @@
 import { prisma } from '../../lib/prisma.js'
-import type { CreateTaskInput, UpdateTaskInput } from './task.schema.js'
+import LogService from '../../log/log.service.js'
+import type {
+  CreateTaskInput,
+  UpdateTaskInput,
+  TaskFilterInput
+} from './task.schema.js'
 
 class TaskService {
 
-  // --- ACCESS CHECKS ---
-
-  private static async assertOwner(projectId: string, userId: string) {
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        createdBy: userId,
-        isDeleted: false
-      }
-    })
-
-    if (!project) {
-      throw new Error('Access denied or project not found')
-    }
+  private static isAdmin(role: string) {
+    return role === 'ADMIN' || role === 'SUPER_ADMIN'
   }
 
-  private static async assertProjectAccess(projectId: string, userId: string) {
+  private static async assertProjectAccess(
+    projectId: string,
+    userId: string,
+    role: string
+  ) {
+    if (this.isAdmin(role)) return
+
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
@@ -40,85 +39,198 @@ class TaskService {
     }
   }
 
-  private static async validateGoal(projectId: string, goalId?: string | null) {
-    if (!goalId) return
+  private static async assertOwner(
+    projectId: string,
+    userId: string,
+    role: string
+  ) {
+    if (this.isAdmin(role)) return
 
-    const goal = await prisma.goal.findFirst({
+    const project = await prisma.project.findFirst({
       where: {
-        id: goalId,
-        projectId,
+        id: projectId,
+        createdBy: userId,
         isDeleted: false
       }
     })
 
-    if (!goal) {
-      throw new Error('Goal does not belong to this project')
+    if (!project) {
+      throw new Error('Only project owner can modify tasks')
     }
   }
 
-  private static async validateAssignee(
-    projectId: string,
-    assignedTo?: string | null
-  ) {
-    if (!assignedTo) return
+  // SYSTEM TASKS
 
-    const member = await prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: {
-          projectId,
-          userId: assignedTo
-        }
-      }
+  static async getSystemTasks(filters: TaskFilterInput) {
+
+    const { page, limit, search, status, priority, assignedTo, goalId } = filters
+
+    const where: any = { isDeleted: false }
+
+    if (status) where.status = status
+    if (priority) where.priority = priority
+    if (assignedTo) where.assignedTo = assignedTo
+    if (goalId) where.goalId = goalId
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    const tasks = await prisma.task.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: 'desc' }
     })
 
-    if (!member) {
-      throw new Error('Assigned user must be a project member')
+    const total = await prisma.task.count({ where })
+
+    return {
+      tasks,
+      meta: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+        perPage: limit
+      }
     }
   }
 
-  // --- CRUD ---
+  static async getMyTasksInProject(
+    userId: string,
+    projectId: string,
+    role: string,
+    filters: TaskFilterInput
+  ) {
+
+    // 🔐 Проверяем доступ к проекту
+    await this.assertProjectAccess(projectId, userId, role)
+
+    const { page, limit, search, status, priority } = filters
+
+    const where: any = {
+      projectId,
+      assignedTo: userId,
+      isDeleted: false
+    }
+
+    if (status) where.status = status
+    if (priority) where.priority = priority
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    const tasks = await prisma.task.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    })
+
+    const total = await prisma.task.count({ where })
+
+    return {
+      tasks,
+      meta: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+        perPage: limit
+      }
+    }
+  }
+
+  // CREATE
 
   static async create(
     projectId: string,
     userId: string,
+    role: string,
     data: CreateTaskInput
   ) {
-    await this.assertOwner(projectId, userId)
-    await this.validateGoal(projectId, data.goalId)
-    await this.validateAssignee(projectId, data.assignedTo)
 
-    return prisma.task.create({
+    await this.assertOwner(projectId, userId, role)
+
+    const task = await prisma.task.create({
       data: {
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
+        ...data,
         projectId,
-        goalId: data.goalId ?? null,
-        createdBy: userId,
-        assignedTo: data.assignedTo ?? null
+        createdBy: userId
       }
     })
+
+    await LogService.logAction(userId, 'CREATE_TASK', 'Task', task.id)
+
+    return task
   }
 
-  static async getAll(projectId: string, userId: string) {
-    await this.assertProjectAccess(projectId, userId)
+  // PROJECT TASKS
 
-    return prisma.task.findMany({
-      where: {
-        projectId,
-        isDeleted: false
-      },
+  static async getAll(
+    projectId: string,
+    userId: string,
+    role: string,
+    filters: TaskFilterInput
+  ) {
+
+    await this.assertProjectAccess(projectId, userId, role)
+
+    const { page, limit, search, status, priority, assignedTo, goalId } = filters
+
+    const where: any = {
+      projectId,
+      isDeleted: false
+    }
+
+    if (status) where.status = status
+    if (priority) where.priority = priority
+    if (assignedTo) where.assignedTo = assignedTo
+    if (goalId) where.goalId = goalId
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    const tasks = await prisma.task.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
       orderBy: { createdAt: 'desc' }
     })
+
+    const total = await prisma.task.count({ where })
+
+    return {
+      tasks,
+      meta: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+        perPage: limit
+      }
+    }
   }
+
+  // GET ONE
 
   static async getOne(
     projectId: string,
     taskId: string,
-    userId: string
+    userId: string,
+    role: string
   ) {
-    await this.assertProjectAccess(projectId, userId)
+
+    await this.assertProjectAccess(projectId, userId, role)
 
     const task = await prisma.task.findFirst({
       where: {
@@ -135,63 +247,61 @@ class TaskService {
     return task
   }
 
+  // UPDATE
+
   static async update(
     projectId: string,
     taskId: string,
     userId: string,
+    role: string,
     data: UpdateTaskInput
   ) {
-    await this.assertOwner(projectId, userId)
+
+    await this.assertOwner(projectId, userId, role)
 
     const existing = await prisma.task.findFirst({
-      where: {
-        id: taskId,
-        projectId,
-        isDeleted: false
-      }
+      where: { id: taskId, projectId, isDeleted: false }
     })
 
     if (!existing) {
       throw new Error('Task not found')
     }
 
-    if (data.goalId !== undefined) {
-      await this.validateGoal(projectId, data.goalId)
-    }
-
-    if (data.assignedTo !== undefined) {
-      await this.validateAssignee(projectId, data.assignedTo)
-    }
-
-    return prisma.task.update({
+    const updated = await prisma.task.update({
       where: { id: taskId },
       data
     })
+
+    await LogService.logAction(userId, 'UPDATE_TASK', 'Task', taskId)
+
+    return updated
   }
+
+  // DELETE
 
   static async delete(
     projectId: string,
     taskId: string,
-    userId: string
+    userId: string,
+    role: string
   ) {
-    await this.assertOwner(projectId, userId)
+
+    await this.assertOwner(projectId, userId, role)
 
     const existing = await prisma.task.findFirst({
-      where: {
-        id: taskId,
-        projectId,
-        isDeleted: false
-      }
+      where: { id: taskId, projectId, isDeleted: false }
     })
 
     if (!existing) {
       throw new Error('Task not found')
     }
 
-    return prisma.task.update({
+    await prisma.task.update({
       where: { id: taskId },
       data: { isDeleted: true }
     })
+
+    await LogService.logAction(userId, 'DELETE_TASK', 'Task', taskId)
   }
 }
 

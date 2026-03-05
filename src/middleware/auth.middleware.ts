@@ -9,6 +9,7 @@ export interface AuthRequest extends Request {
   }
 }
 
+// authMiddleware для проверки jwt
 export function authMiddleware(
   req: AuthRequest,
   res: Response,
@@ -32,5 +33,24 @@ export function authMiddleware(
     next()
   } catch {
     return res.status(401).json({ message: 'Invalid or expired token' })
+  }
+}
+
+// requireRole middleware для проверки прав
+export const requireRole = (roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    const userRole = req.user?.role
+
+    if (!userRole || !roles.includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to perform this action'
+        }
+      })
+    }
+
+    next()
   }
 }
