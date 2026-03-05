@@ -59,8 +59,6 @@ class TaskService {
     }
   }
 
-  // SYSTEM TASKS
-
   static async getSystemTasks(filters: TaskFilterInput) {
 
     const { page, limit, search, status, priority, assignedTo, goalId } = filters
@@ -106,7 +104,6 @@ class TaskService {
     filters: TaskFilterInput
   ) {
 
-    // 🔐 Проверяем доступ к проекту
     await this.assertProjectAccess(projectId, userId, role)
 
     const { page, limit, search, status, priority } = filters
@@ -147,8 +144,6 @@ class TaskService {
     }
   }
 
-  // CREATE
-
   static async create(
     projectId: string,
     userId: string,
@@ -170,8 +165,6 @@ class TaskService {
 
     return task
   }
-
-  // PROJECT TASKS
 
   static async getAll(
     projectId: string,
@@ -221,8 +214,6 @@ class TaskService {
     }
   }
 
-  // GET ONE
-
   static async getOne(
     projectId: string,
     taskId: string,
@@ -246,8 +237,6 @@ class TaskService {
 
     return task
   }
-
-  // UPDATE
 
   static async update(
     projectId: string,
@@ -276,8 +265,6 @@ class TaskService {
 
     return updated
   }
-
-  // DELETE
 
   static async delete(
     projectId: string,

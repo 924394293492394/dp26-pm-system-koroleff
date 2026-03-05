@@ -1,31 +1,53 @@
 import { prisma } from '../../lib/prisma.js'
-import type { CreateProjectInput, UpdateProjectInput } from './project.schema.js'
+import LogService from '../../log/log.service.js'
+import type {
+  CreateProjectInput,
+  UpdateProjectInput,
+  ProjectFilterInput
+} from './project.schema.js'
 
 class ProjectService {
 
-  static async create(userId: string, data: CreateProjectInput) {
-    return prisma.project.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        createdBy: userId
-      }
-    })
+  private static isAdmin(role: string) {
+    return role === 'ADMIN' || role === 'SUPER_ADMIN'
   }
 
-  static async getAll(userId: string) {
-    return prisma.project.findMany({
+  private static async assertProjectAccess(
+    projectId: string,
+    userId: string,
+    role: string
+  ) {
+
+    if (this.isAdmin(role)) return
+
+    const project = await prisma.project.findFirst({
       where: {
-        createdBy: userId,
-        isDeleted: false
-      },
-      orderBy: {
-        createdAt: 'desc'
+        id: projectId,
+        isDeleted: false,
+        OR: [
+          { createdBy: userId },
+          {
+            members: {
+              some: { userId }
+            }
+          }
+        ]
       }
     })
+
+    if (!project) {
+      throw new Error('Access denied or project not found')
+    }
   }
 
-  static async getById(userId: string, projectId: string) {
+  private static async assertOwner(
+    projectId: string,
+    userId: string,
+    role: string
+  ) {
+
+    if (this.isAdmin(role)) return
+
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
@@ -34,48 +56,309 @@ class ProjectService {
       }
     })
 
-    if (!project) throw new Error('Project not found')
+    if (!project) {
+      throw new Error('Only project owner can modify project')
+    }
+  }
+
+  static async create(
+    userId: string,
+    data: CreateProjectInput
+  ) {
+
+    const project = await prisma.project.create({
+      data: {
+        ...data,
+        createdBy: userId
+      }
+    })
+
+    await LogService.logAction(userId, 'CREATE_PROJECT', 'Project', project.id)
 
     return project
   }
 
+  static async getSystemProjects(filters: ProjectFilterInput) {
+
+    const { page, limit, search, isArchived } = filters
+
+    const where: any = { isDeleted: false }
+
+    if (isArchived !== undefined) where.isArchived = isArchived
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    const projects = await prisma.project.findMany({
+
+      where,
+
+      skip: (page - 1) * limit,
+      take: limit,
+
+      orderBy: {
+        createdAt: 'desc'
+      }
+
+    })
+
+    const total = await prisma.project.count({ where })
+
+    return {
+
+      projects,
+
+      meta: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+        perPage: limit
+      }
+
+    }
+
+  }
+
+  static async getMyProjects(
+    userId: string,
+    filters: ProjectFilterInput
+  ) {
+
+    const { page, limit, search } = filters
+
+    const where: any = {
+
+      isDeleted: false,
+
+      OR: [
+        { createdBy: userId },
+        {
+          members: {
+            some: { userId }
+          }
+        }
+      ]
+
+    }
+
+    if (search) {
+
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } }
+          ]
+        }
+      ]
+
+    }
+
+    const projects = await prisma.project.findMany({
+
+      where,
+
+      skip: (page - 1) * limit,
+      take: limit,
+
+      orderBy: {
+        createdAt: 'desc'
+      }
+
+    })
+
+    const total = await prisma.project.count({ where })
+
+    return {
+
+      projects,
+
+      meta: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+        perPage: limit
+      }
+
+    }
+
+  }
+
+  static async getAll(
+    userId: string,
+    role: string,
+    filters: ProjectFilterInput
+  ) {
+
+    const { page, limit, search } = filters
+
+    const where: any = {
+      isDeleted: false
+    }
+
+    if (!this.isAdmin(role)) {
+
+      where.OR = [
+        { createdBy: userId },
+        {
+          members: {
+            some: { userId }
+          }
+        }
+      ]
+
+    }
+
+    if (search) {
+
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } }
+          ]
+        }
+      ]
+
+    }
+
+    const projects = await prisma.project.findMany({
+
+      where,
+
+      skip: (page - 1) * limit,
+      take: limit,
+
+      orderBy: {
+        createdAt: 'desc'
+      }
+
+    })
+
+    const total = await prisma.project.count({ where })
+
+    return {
+
+      projects,
+
+      meta: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+        perPage: limit
+      }
+
+    }
+
+  }
+
+  static async getById(
+    userId: string,
+    role: string,
+    projectId: string
+  ) {
+
+    await this.assertProjectAccess(projectId, userId, role)
+
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        isDeleted: false
+      }
+    })
+
+    if (!project) {
+      throw new Error('Project not found')
+    }
+
+    return project
+
+  }
+
   static async update(
     userId: string,
+    role: string,
     projectId: string,
     data: UpdateProjectInput
   ) {
-    const existing = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        createdBy: userId,
-        isDeleted: false
-      }
-    })
 
-    if (!existing) throw new Error('Project not found')
+    await this.assertOwner(projectId, userId, role)
 
-    return prisma.project.update({
+    const project = await prisma.project.update({
       where: { id: projectId },
       data
     })
+
+    await LogService.logAction(userId, 'UPDATE_PROJECT', 'Project', projectId)
+
+    return project
+
   }
 
-  static async delete(userId: string, projectId: string) {
-    const existing = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        createdBy: userId,
-        isDeleted: false
-      }
-    })
+  static async archive(
+    userId: string,
+    role: string,
+    projectId: string
+  ) {
 
-    if (!existing) throw new Error('Project not found')
+    await this.assertOwner(projectId, userId, role)
 
-    return prisma.project.update({
+    const project = await prisma.project.update({
       where: { id: projectId },
-      data: { isDeleted: true }
+      data: { isArchived: true }
     })
+
+    await LogService.logAction(userId, 'ARCHIVE_PROJECT', 'Project', projectId)
+
+    return project
+
   }
+
+  static async unarchive(
+    userId: string,
+    role: string,
+    projectId: string
+  ) {
+
+    await this.assertOwner(projectId, userId, role)
+
+    const project = await prisma.project.update({
+      where: { id: projectId },
+      data: { isArchived: false }
+    })
+
+    await LogService.logAction(userId, 'UNARCHIVE_PROJECT', 'Project', projectId)
+
+    return project
+
+  }
+
+  static async delete(
+    userId: string,
+    role: string,
+    projectId: string
+  ) {
+
+    await this.assertOwner(projectId, userId, role)
+
+    await prisma.project.update({
+
+      where: { id: projectId },
+
+      data: {
+        isDeleted: true
+      }
+
+    })
+
+    await LogService.logAction(userId, 'DELETE_PROJECT', 'Project', projectId)
+
+  }
+
 }
 
 export default ProjectService

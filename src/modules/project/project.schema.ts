@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+export const projectParamsSchema = z.object({
+  id: z.string().uuid()
+})
+
 export const createProjectSchema = z.object({
   name: z.string().min(3),
   description: z.string().optional()
@@ -11,9 +15,13 @@ export const updateProjectSchema = z.object({
   isArchived: z.boolean().optional()
 })
 
-export const projectParamsSchema = z.object({
-  id: z.string().uuid()
+export const projectFilterSchema = z.object({
+  search: z.string().optional(),
+  isArchived: z.coerce.boolean().optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(10)
 })
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>
+export type ProjectFilterInput = z.infer<typeof projectFilterSchema>
