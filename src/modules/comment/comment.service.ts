@@ -1,56 +1,54 @@
 import { prisma } from '../../lib/prisma.js'
-import { CreateCommentInput, UpdateCommentInput } from './comment.schema.js'
+import { ProjectRole } from '@prisma/client'
+import {
+    CreateCommentInput,
+    UpdateCommentInput,
+    CommentQuery
+} from './comment.schema.js'
+import { AppError } from '../../middleware/error.middleware.js'
 
 class CommentService {
 
-    // --- ACCESS CHECKS ---
+    private static isSystem(role: string) {
+        return role === 'ADMIN' || role === 'SUPER_ADMIN'
+    }
 
-    private static async assertProjectAccess(projectId: string, userId: string) {
+    private static async getProject(projectId: string) {
         const project = await prisma.project.findFirst({
-            where: {
-                id: projectId,
-                isDeleted: false,
-                OR: [
-                    { createdBy: userId },
-                    {
-                        members: {
-                            some: { userId }
-                        }
-                    }
-                ]
-            }
+            where: { id: projectId, isDeleted: false }
         })
-
-        if (!project) {
-            throw new Error('Access denied or project not found')
-        }
+        if (!project)
+            throw new AppError('PROJECT_NOT_FOUND', 'Project not found', 404)
+        return project
     }
 
-    private static async assertTaskAccess(taskId: string, projectId: string) {
+    private static async getTask(projectId: string, taskId: string) {
         const task = await prisma.task.findFirst({
-            where: {
-                id: taskId,
-                projectId,
-                isDeleted: false
-            }
+            where: { id: taskId, projectId, isDeleted: false }
         })
-
-        if (!task) {
-            throw new Error('Task not found or access denied')
-        }
+        if (!task)
+            throw new AppError('TASK_NOT_FOUND', 'Task not found', 404)
+        return task
     }
 
-    // --- CRUD ---
+    private static async getMembership(projectId: string, userId: string) {
+        return prisma.projectMember.findUnique({
+            where: {
+                projectId_userId: { projectId, userId }
+            }
+        })
+    }
 
-    static async create(
-        projectId: string,
-        taskId: string,
-        userId: string,
-        data: CreateCommentInput
+    static async create(projectId: string, taskId: string, userId: string, role: string, data: CreateCommentInput
     ) {
-        await this.assertProjectAccess(projectId, userId)
-        await this.assertTaskAccess(taskId, projectId)
+        await this.getProject(projectId)
+        await this.getTask(projectId, taskId)
+        if (!this.isSystem(role)) {
+            const member = await this.getMembership(projectId, userId)
+            if (!member || member.role === ProjectRole.VIEWER)
+                throw new AppError('FORBIDDEN', 'Not allowed to comment', 403)
 
+        }
         return prisma.comment.create({
             data: {
                 issueId: taskId,
@@ -60,70 +58,77 @@ class CommentService {
         })
     }
 
-    static async getAll(projectId: string, taskId: string, userId: string) {
-        await this.assertProjectAccess(projectId, userId)
-        await this.assertTaskAccess(taskId, projectId)
+    static async getAll(projectId: string, taskId: string, userId: string, role: string, query: CommentQuery
+    ) {
+        await this.getProject(projectId)
+        await this.getTask(projectId, taskId)
+        if (!this.isSystem(role)) {
+            const member = await this.getMembership(projectId, userId)
+            if (!member)
+                throw new AppError('FORBIDDEN', 'Access denied', 403)
+        }
+        const { page, limit, search, userId: filterUser } = query
+        const where: any = {
+            issueId: taskId,
+            isDeleted: false
+        }
+        if (search)
+            where.text = { contains: search, mode: 'insensitive' }
+        if (filterUser)
+            where.userId = filterUser
+        const total = await prisma.comment.count({ where })
+        const comments = await prisma.comment.findMany({
+            where,
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: { createdAt: 'asc' },
+            include: {
+                user: {
+                    select: { id: true, email: true }
+                }
+            }
+        })
+        return {
+            data: comments,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        }
+    }
 
-        return prisma.comment.findMany({
+    static async getOne(projectId: string, taskId: string, commentId: string, userId: string, role: string
+    ) {
+        await this.getProject(projectId)
+        await this.getTask(projectId, taskId)
+        if (!this.isSystem(role)) {
+            const member = await this.getMembership(projectId, userId)
+            if (!member)
+                throw new AppError('FORBIDDEN', 'Access denied', 403)
+        }
+        const comment = await prisma.comment.findFirst({
             where: {
+                id: commentId,
                 issueId: taskId,
                 isDeleted: false
             },
             include: {
                 user: {
-                    select: {
-                        id: true,
-                        email: true
-                    }
+                    select: { id: true, email: true }
                 }
-            },
-            orderBy: {
-                createdAt: 'asc'
             }
         })
+        if (!comment)
+            throw new AppError('COMMENT_NOT_FOUND', 'Comment not found', 404)
+        return comment
     }
 
-    static async update(
-        projectId: string,
-        taskId: string,
-        commentId: string,
-        userId: string,
-        data: UpdateCommentInput
+    static async update( projectId: string, taskId: string, commentId: string, userId: string, role: string, data: UpdateCommentInput
     ) {
-        await this.assertProjectAccess(projectId, userId)
-        await this.assertTaskAccess(taskId, projectId)
-
-        const existing = await prisma.comment.findFirst({
-            where: {
-                id: commentId,
-                issueId: taskId,
-                isDeleted: false
-            }
-        })
-
-        if (!existing) {
-            throw new Error('Comment not found')
-        }
-
-        if (existing.userId !== userId) {
-            throw new Error('You can update only your own comment')
-        }
-
-        return prisma.comment.update({
-            where: { id: commentId },
-            data
-        })
-    }
-
-    static async delete(
-        projectId: string,
-        taskId: string,
-        commentId: string,
-        userId: string
-    ) {
-        await this.assertProjectAccess(projectId, userId)
-        await this.assertTaskAccess(taskId, projectId)
-
+        await this.getProject(projectId)
+        await this.getTask(projectId, taskId)
         const comment = await prisma.comment.findFirst({
             where: {
                 id: commentId,
@@ -131,19 +136,78 @@ class CommentService {
                 isDeleted: false
             }
         })
-
-        if (!comment) {
-            throw new Error('Comment not found')
+        if (!comment)
+            throw new AppError('COMMENT_NOT_FOUND', 'Comment not found', 404)
+        if (!this.isSystem(role)) {
+            const member = await this.getMembership(projectId, userId)
+            if (!member)
+                throw new AppError('FORBIDDEN', 'Access denied', 403)
+            if (member.role === ProjectRole.VIEWER)
+                throw new AppError('FORBIDDEN', 'Viewer cannot update comments', 403)
+            if (member.role === ProjectRole.MEMBER && comment.userId !== userId)
+                throw new AppError('FORBIDDEN', 'Members can update only their comments', 403)
         }
+        return prisma.comment.update({
+            where: { id: commentId },
+            data
+        })
+    }
 
-        if (comment.userId !== userId) {
-            throw new Error('You can delete only your own comment')
+    static async delete( projectId: string, taskId: string, commentId: string, userId: string, role: string
+    ) {
+        await this.getProject(projectId)
+        await this.getTask(projectId, taskId)
+        const comment = await prisma.comment.findFirst({
+            where: {
+                id: commentId,
+                issueId: taskId,
+                isDeleted: false
+            }
+        })
+        if (!comment)
+            throw new AppError('COMMENT_NOT_FOUND', 'Comment not found', 404)
+        if (!this.isSystem(role)) {
+            const member = await this.getMembership(projectId, userId)
+            if (!member)
+                throw new AppError('FORBIDDEN', 'Access denied', 403)
+            if (member.role === ProjectRole.VIEWER)
+                throw new AppError('FORBIDDEN', 'Viewer cannot delete comments', 403)
+            if (member.role === ProjectRole.MEMBER && comment.userId !== userId)
+                throw new AppError('FORBIDDEN', 'Members can delete only their comments', 403)
         }
-
         return prisma.comment.update({
             where: { id: commentId },
             data: { isDeleted: true }
         })
+    }
+
+    static async systemComments(query: CommentQuery) {
+        const { page, limit, search, userId } = query
+        const where: any = { isDeleted: false }
+        if (search)
+            where.text = { contains: search, mode: 'insensitive' }
+        if (userId)
+            where.userId = userId
+        const total = await prisma.comment.count({ where })
+        const comments = await prisma.comment.findMany({
+            where,
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                user: true,
+                issue: true
+            }
+        })
+        return {
+            data: comments,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        }
     }
 }
 
