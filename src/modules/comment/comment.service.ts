@@ -51,7 +51,7 @@ class CommentService {
         }
         return prisma.comment.create({
             data: {
-                issueId: taskId,
+                taskId: taskId,
                 userId,
                 text: data.text
             }
@@ -111,7 +111,7 @@ class CommentService {
         const comment = await prisma.comment.findFirst({
             where: {
                 id: commentId,
-                issueId: taskId,
+                taskId: taskId,
                 isDeleted: false
             },
             include: {
@@ -132,7 +132,7 @@ class CommentService {
         const comment = await prisma.comment.findFirst({
             where: {
                 id: commentId,
-                issueId: taskId,
+                taskId: taskId,
                 isDeleted: false
             }
         })
@@ -160,7 +160,7 @@ class CommentService {
         const comment = await prisma.comment.findFirst({
             where: {
                 id: commentId,
-                issueId: taskId,
+                taskId: taskId,
                 isDeleted: false
             }
         })
@@ -196,7 +196,7 @@ class CommentService {
             orderBy: { createdAt: 'desc' },
             include: {
                 user: true,
-                issue: true
+                task: true
             }
         })
         return {
