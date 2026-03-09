@@ -7,6 +7,8 @@ import {
     commentParamsSchema,
     commentQuerySchema
 } from './comment.schema.js'
+import { successResponse } from '../../common/utils/response.js'
+
 
 export class CommentController {
 
@@ -21,7 +23,7 @@ export class CommentController {
                 req.user!.role,
                 data
             )
-            res.status(201).json(comment)
+            res.status(201).json(successResponse(comment))
         } catch (e) { next(e) }
     }
 
@@ -29,20 +31,19 @@ export class CommentController {
         try {
             const { projectId, taskId } = commentParamsSchema.parse(req.params)
             const query = commentQuerySchema.parse(req.query)
-            const comments = await CommentService.getAll(
+            const result = await CommentService.getAll(
                 projectId,
                 taskId,
                 req.user!.userId,
                 req.user!.role,
                 query
             )
-            res.json(comments)
+            res.json(successResponse(result.data, result.meta))
         } catch (e) { next(e) }
     }
 
     static async getOne(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-
             const { projectId, taskId, commentId } = commentParamsSchema.parse(req.params)
             const comment = await CommentService.getOne(
                 projectId,
@@ -51,13 +52,12 @@ export class CommentController {
                 req.user!.userId,
                 req.user!.role
             )
-            res.json(comment)
+            res.json(successResponse(comment))
         } catch (e) { next(e) }
     }
 
     static async update(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-
             const { projectId, taskId, commentId } = commentParamsSchema.parse(req.params)
             const data = updateCommentSchema.parse(req.body)
             const updated = await CommentService.update(
@@ -68,7 +68,7 @@ export class CommentController {
                 req.user!.role,
                 data
             )
-            res.json(updated)
+            res.json(successResponse(updated))
         } catch (e) { next(e) }
     }
 
@@ -83,14 +83,6 @@ export class CommentController {
                 req.user!.role
             )
             res.status(204).send()
-        } catch (e) { next(e) }
-    }
-
-    static async systemComments(req: AuthRequest, res: Response, next: NextFunction) {
-        try {
-            const query = commentQuerySchema.parse(req.query)
-            const comments = await CommentService.systemComments(query)
-            res.json(comments)
         } catch (e) { next(e) }
     }
 }

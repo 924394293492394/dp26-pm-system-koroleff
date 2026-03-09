@@ -6,7 +6,13 @@ const profileRouter = Router()
 
 profileRouter.use(authMiddleware)
 
-profileRouter.get('/', ProfileController.get)
-profileRouter.patch('/', ProfileController.update)
+//users cm-09/03/2026 Korolev E.V.
+profileRouter.get('/', ProfileController.getMy)
+profileRouter.get('/users/:userId', ProfileController.getPublic)
+profileRouter.patch('/', ProfileController.updateMy)
 
-export { profileRouter };
+//adminka cm-09/03/2026 Korolev E.V.
+profileRouter.get('/system/users', ProfileController.getUsers)
+profileRouter.patch('/system/users/:userId', ProfileController.adminUpdate)
+
+export { profileRouter }

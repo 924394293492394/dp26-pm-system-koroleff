@@ -1,69 +1,71 @@
 import { prisma } from '../../lib/prisma.js'
+import { AppError } from '../../middleware/error.middleware.js'
+import LogService from '../../log/log.service.js'
 import type {
   AddMemberInput,
   UpdateMemberInput,
   MemberFilterInput
 } from './project-member.schema.js'
+import { ProjectRole } from '@prisma/client'
 
 class ProjectMemberService {
+
+  private static ROLE_HIERARCHY: Record<ProjectRole, number> = {
+    OWNER: 4,
+    MANAGER: 3,
+    MEMBER: 2,
+    VIEWER: 1
+  }
+
+  private static isAdmin(role: string) {
+    return role === 'ADMIN' || role === 'SUPER_ADMIN'
+  }
+
   private static async getUserProjectRole(projectId: string, userId: string) {
     const member = await prisma.projectMember.findUnique({
       where: {
         projectId_userId: { projectId, userId }
       }
     })
+
     if (!member) {
-      throw new Error('User is not member of project')
+      throw new AppError('FORBIDDEN', 'Not member of project', 403)
     }
+
     return member.role
   }
 
-  private static async assertManagerAccess(projectId: string, userId: string) {
-    const role = await this.getUserProjectRole(projectId, userId)
-    if (!['OWNER', 'MANAGER'].includes(role)) {
-      throw new Error('Access denied')
+  private static canAssignRole(currentRole: ProjectRole, targetRole: ProjectRole) {
+    return this.ROLE_HIERARCHY[targetRole] <= this.ROLE_HIERARCHY[currentRole]
+  }
+
+  private static canManageRole(currentRole: ProjectRole, targetRole: ProjectRole) {
+    return this.ROLE_HIERARCHY[targetRole] < this.ROLE_HIERARCHY[currentRole]
+  }
+
+  private static async assertManagerAccess(projectId: string, userId: string, role: string) {
+    if (this.isAdmin(role)) return;
+
+    const projectRole = await this.getUserProjectRole(projectId, userId);
+
+    if (!['OWNER', 'MANAGER'].includes(projectRole)) {
+      throw new AppError('FORBIDDEN', 'Access denied', 403);
     }
   }
 
-  static async getSystemMembers(query: any) {
-    const page = Number(query.page) || 1
-    const limit = Number(query.limit) || 10
-    const skip = (page - 1) * limit
+  private static async assertProjectAccess(projectId: string, userId: string, role: string) {
+    if (this.isAdmin(role)) return;
 
-    const [data, total] = await Promise.all([
-      prisma.projectMember.findMany({
-        skip,
-        take: limit,
-        include: {
-          user: {
-            select: {
-              id: true,
-              login: true,
-              email: true
-            }
-          },
-          project: {
-            select: {
-              id: true,
-              name: true
-            }
-          }
-        }
-      }),
-      prisma.projectMember.count()
-    ])
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
-    }
+    await this.getUserProjectRole(projectId, userId)
   }
 
-  static async getMyMembership(projectId: string, userId: string) {
+  static async getMyMembership(projectId: string, userId: string, role: string) {
+    if (this.isAdmin(role)) {
+      return prisma.projectMember.findFirst({
+        where: { projectId, userId }
+      })
+    }
+
     return prisma.projectMember.findUnique({
       where: {
         projectId_userId: { projectId, userId }
@@ -71,8 +73,24 @@ class ProjectMemberService {
     })
   }
 
-  static async add(projectId: string, currentUserId: string, data: AddMemberInput) {
-    await this.assertManagerAccess(projectId, currentUserId)
+  static async add(
+    projectId: string,
+    currentUserId: string,
+    role: string,
+    data: AddMemberInput
+  ) {
+
+    await this.assertManagerAccess(projectId, currentUserId, role)
+
+    const newRole: ProjectRole = data.role ?? ProjectRole.MEMBER
+
+    const currentProjectRole = this.isAdmin(role)
+      ? ProjectRole.OWNER
+      : await this.getUserProjectRole(projectId, currentUserId)
+
+    if (!this.canAssignRole(currentProjectRole, newRole)) {
+      throw new AppError('FORBIDDEN', 'Cannot assign role higher than your own', 403)
+    }
 
     const exists = await prisma.projectMember.findUnique({
       where: {
@@ -81,35 +99,31 @@ class ProjectMemberService {
     })
 
     if (exists) {
-      throw new Error('User already in project')
+      throw new AppError('CONFLICT', 'User already in project', 409)
     }
 
-    return prisma.projectMember.create({
+    const member = await prisma.projectMember.create({
       data: {
         projectId,
         userId: data.userId,
-        role: data.role ?? 'MEMBER'
+        role: newRole
       }
     })
+
+    await LogService.logAction(currentUserId, 'ADD_PROJECT_MEMBER', 'ProjectMember', member.userId)
+
+    return member
   }
 
-  static async getAll(
-    projectId: string,
-    currentUserId: string,
-    filters: MemberFilterInput
-  ) {
-    await this.getUserProjectRole(projectId, currentUserId)
+  static async getAll(projectId: string, currentUserId: string, role: string, filters: MemberFilterInput) {
+    await this.assertProjectAccess(projectId, currentUserId, role)
 
-    const { role, search, page, limit } = filters
+    const { role: filterRole, search, page, limit } = filters
     const skip = (page - 1) * limit
 
-    const where: any = {
-      projectId
-    }
+    const where: any = { projectId }
 
-    if (role) {
-      where.role = role
-    }
+    if (filterRole) where.role = filterRole
 
     if (search) {
       where.user = {
@@ -134,15 +148,13 @@ class ProjectMemberService {
             }
           }
         },
-        orderBy: {
-          joinedAt: 'desc'
-        }
+        orderBy: { joinedAt: 'desc' }
       }),
       prisma.projectMember.count({ where })
     ])
 
     return {
-      data,
+      members: data,
       meta: {
         total,
         page,
@@ -152,12 +164,8 @@ class ProjectMemberService {
     }
   }
 
-  static async getOne(
-    projectId: string,
-    currentUserId: string,
-    memberUserId: string
-  ) {
-    await this.getUserProjectRole(projectId, currentUserId)
+  static async getOne(projectId: string, currentUserId: string, role: string, memberUserId: string) {
+    await this.assertProjectAccess(projectId, currentUserId, role)
 
     const member = await prisma.projectMember.findUnique({
       where: {
@@ -175,20 +183,16 @@ class ProjectMemberService {
     })
 
     if (!member) {
-      throw new Error('Member not found')
+      throw new AppError('NOT_FOUND', 'Member not found', 404)
     }
 
     return member
   }
 
-  static async update(
-    projectId: string,
-    currentUserId: string,
-    memberUserId: string,
-    data: UpdateMemberInput
-  ) {
-    await this.assertManagerAccess(projectId, currentUserId)
+  static async update(projectId: string, currentUserId: string, role: string, memberUserId: string, data: UpdateMemberInput) {
+    await this.assertManagerAccess(projectId, currentUserId, role)
 
+    const currentRole = await this.getUserProjectRole(projectId, currentUserId)
     const member = await prisma.projectMember.findUnique({
       where: {
         projectId_userId: { projectId, userId: memberUserId }
@@ -196,34 +200,38 @@ class ProjectMemberService {
     })
 
     if (!member) {
-      throw new Error('Member not found')
+      throw new AppError('NOT_FOUND', 'Member not found', 404)
     }
 
     if (member.role === 'OWNER') {
-      throw new Error('Owner cannot be modified')
+      throw new AppError('FORBIDDEN', 'Owner cannot be modified', 403)
     }
 
     if (memberUserId === currentUserId) {
-      throw new Error('You cannot change your own role')
+      throw new AppError('FORBIDDEN', 'You cannot change your own role', 403)
     }
 
-    return prisma.projectMember.update({
+    if (!this.canAssignRole(currentRole, data.role)) {
+      throw new AppError('FORBIDDEN', 'Cannot assign role higher than your own', 403)
+    }
+
+    const updated = await prisma.projectMember.update({
       where: {
         projectId_userId: { projectId, userId: memberUserId }
       },
       data
     })
+
+    await LogService.logAction(currentUserId, 'UPDATE_PROJECT_MEMBER', 'ProjectMember', memberUserId)
+
+    return updated
   }
 
-  static async remove(
-    projectId: string,
-    currentUserId: string,
-    memberUserId: string
-  ) {
-    await this.assertManagerAccess(projectId, currentUserId)
+  static async remove(projectId: string, currentUserId: string, role: string, memberUserId: string) {
+    await this.assertManagerAccess(projectId, currentUserId, role)
 
     if (memberUserId === currentUserId) {
-      throw new Error('You cannot remove yourself')
+      throw new AppError('FORBIDDEN', 'You cannot remove yourself', 403)
     }
 
     const member = await prisma.projectMember.findUnique({
@@ -233,21 +241,27 @@ class ProjectMemberService {
     })
 
     if (!member) {
-      throw new Error('Member not found')
+      throw new AppError('NOT_FOUND', 'Member not found', 404)
     }
 
     if (member.role === 'OWNER') {
-      throw new Error('Owner cannot be removed')
+      throw new AppError('FORBIDDEN', 'Owner cannot be removed', 403)
     }
 
-    return prisma.projectMember.delete({
+    await prisma.projectMember.delete({
       where: {
         projectId_userId: { projectId, userId: memberUserId }
       }
     })
+
+    await LogService.logAction(currentUserId, 'REMOVE_PROJECT_MEMBER', 'ProjectMember', memberUserId)
   }
 
-  static async leaveProject(projectId: string, userId: string) {
+  static async leaveProject(projectId: string, userId: string, role: string) {
+    if (this.isAdmin(role)) {
+      throw new AppError('FORBIDDEN', 'Admin cannot leave project', 403)
+    }
+
     const member = await prisma.projectMember.findUnique({
       where: {
         projectId_userId: { projectId, userId }
@@ -255,20 +269,21 @@ class ProjectMemberService {
     })
 
     if (!member) {
-      throw new Error('Not member of project')
+      throw new AppError('NOT_FOUND', 'Not member of project', 404)
     }
 
     if (member.role === 'OWNER') {
-      throw new Error('Owner cannot leave project')
+      throw new AppError('FORBIDDEN', 'Owner cannot leave project', 403)
     }
 
-    return prisma.projectMember.delete({
+    await prisma.projectMember.delete({
       where: {
         projectId_userId: { projectId, userId }
       }
     })
-  }
 
+    await LogService.logAction(userId, 'LEAVE_PROJECT', 'ProjectMember', userId)
+  }
 }
 
 export default ProjectMemberService

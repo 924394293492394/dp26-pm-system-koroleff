@@ -6,6 +6,13 @@ import LogService from '../../log/log.service.js'
 
 class GoalService {
 
+  private static ROLE_HIERARCHY: Record<ProjectRole, number> = {
+    OWNER: 4,
+    MANAGER: 3,
+    MEMBER: 2,
+    VIEWER: 1
+  }
+
   private static isAdmin(role: string) {
     return role === 'ADMIN' || role === 'SUPER_ADMIN'
   }
@@ -26,29 +33,77 @@ class GoalService {
   }
 
   private static async getMember(projectId: string, userId: string) {
-    return prisma.projectMember.findUnique({
+    const member = await prisma.projectMember.findUnique({
       where: {
         projectId_userId: { projectId, userId }
       }
     })
+
+    if (!member) {
+      throw new AppError('FORBIDDEN', 'User is not a project member', 403)
+    }
+
+    return member
   }
 
-  static async create(projectId: string, userId: string, role: string, data: CreateGoalInput) {
+  private static hasRole(memberRole: ProjectRole, required: ProjectRole) {
+    return this.ROLE_HIERARCHY[memberRole] >= this.ROLE_HIERARCHY[required]
+  }
+
+  private static formatGoal(goal: any) {
+    return {
+      id: goal.id,
+      title: goal.title,
+      description: goal.description,
+      status: goal.status,
+      dueDate: goal.dueDate,
+      createdAt: goal.createdAt,
+
+      creator: goal.creator
+        ? {
+            id: goal.creator.id,
+            login: goal.creator.login,
+            email: goal.creator.email
+          }
+        : null,
+
+      responsible: goal.responsible
+        ? {
+            id: goal.responsible.id,
+            login: goal.responsible.login,
+            email: goal.responsible.email
+          }
+        : null,
+
+      tasksCount: goal._count?.tasks ?? 0
+    }
+  }
+
+  static async create(
+    projectId: string,
+    userId: string,
+    role: string,
+    data: CreateGoalInput
+  ) {
+
     await this.getProject(projectId)
 
     if (!this.isAdmin(role)) {
+
       const member = await this.getMember(projectId, userId)
 
-      if (!member || member.role === ProjectRole.VIEWER) {
-        throw new AppError('FORBIDDEN', 'Access denied', 403)
+      if (!this.hasRole(member.role, ProjectRole.MEMBER)) {
+        throw new AppError('FORBIDDEN', 'Insufficient permissions', 403)
       }
     }
 
     const goal = await prisma.goal.create({
       data: {
-        ...data,
+        title: data.title,
+        description: data.description,
         projectId,
         createdBy: userId,
+        responsibleUserId: data.responsibleUserId,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined
       }
     })
@@ -58,8 +113,18 @@ class GoalService {
     return goal
   }
 
-  static async getAll(projectId: string, userId: string, role: string, filters: GoalQuery) {
+  static async getAll(
+    projectId: string,
+    userId: string,
+    role: string,
+    filters: GoalQuery
+  ) {
+
     await this.getProject(projectId)
+
+    if (!this.isAdmin(role)) {
+      await this.getMember(projectId, userId)
+    }
 
     const { page, limit, status, responsibleUserId, search } = filters
 
@@ -84,16 +149,34 @@ class GoalService {
       where,
       skip: (page - 1) * limit,
       take: limit,
+
       include: {
-        creator: true,
-        responsible: true,
-        _count: { select: { tasks: true } }
+        creator: {
+          select: {
+            id: true,
+            login: true,
+            email: true
+          }
+        },
+        responsible: {
+          select: {
+            id: true,
+            login: true,
+            email: true
+          }
+        },
+        _count: {
+          select: {
+            tasks: true
+          }
+        }
       },
+
       orderBy: { createdAt: 'desc' }
     })
 
     return {
-      data: goals,
+      data: goals.map(this.formatGoal),
       meta: {
         total,
         page,
@@ -103,8 +186,18 @@ class GoalService {
     }
   }
 
-  static async getOne(projectId: string, goalId: string, userId: string, role: string) {
+  static async getOne(
+    projectId: string,
+    goalId: string,
+    userId: string,
+    role: string
+  ) {
+
     await this.getProject(projectId)
+
+    if (!this.isAdmin(role)) {
+      await this.getMember(projectId, userId)
+    }
 
     const goal = await prisma.goal.findFirst({
       where: {
@@ -112,44 +205,74 @@ class GoalService {
         projectId,
         isDeleted: false
       },
+
       include: {
-        tasks: true,
-        creator: true,
-        responsible: true
+        creator: {
+          select: {
+            id: true,
+            login: true,
+            email: true
+          }
+        },
+        responsible: {
+          select: {
+            id: true,
+            login: true,
+            email: true
+          }
+        },
+        tasks: true
       }
     })
 
-    if (!goal) throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404)
+    if (!goal) {
+      throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404)
+    }
 
     return goal
   }
 
-  static async update(projectId: string, goalId: string, userId: string, role: string, data: UpdateGoalInput) {
-    const goal = await prisma.goal.findUnique({ where: { id: goalId } })
+  static async update(
+    projectId: string,
+    goalId: string,
+    userId: string,
+    role: string,
+    data: UpdateGoalInput
+  ) {
 
-    if (!goal) throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404)
+    const goal = await prisma.goal.findFirst({
+      where: {
+        id: goalId,
+        projectId,
+        isDeleted: false
+      }
+    })
+
+    if (!goal) {
+      throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404)
+    }
 
     if (!this.isAdmin(role)) {
+
       const member = await this.getMember(projectId, userId)
 
-      if (!member) {
-        throw new AppError('FORBIDDEN', 'Access denied', 403)
-      }
-
-      const allowed =
-        member.role === ProjectRole.OWNER ||
-        member.role === ProjectRole.MANAGER ||
+      const canEdit =
+        this.hasRole(member.role, ProjectRole.MANAGER) ||
         goal.createdBy === userId
 
-      if (!allowed) {
-        throw new AppError('FORBIDDEN', 'Access denied', 403)
+      if (!canEdit) {
+        throw new AppError('FORBIDDEN', 'Insufficient permissions', 403)
       }
     }
 
     const updatedGoal = await prisma.goal.update({
       where: { id: goalId },
+
       data: {
-        ...data,
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        responsibleUserId: data.responsibleUserId,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined
       }
     })
@@ -159,25 +282,35 @@ class GoalService {
     return updatedGoal
   }
 
-  static async delete(projectId: string, goalId: string, userId: string, role: string) {
-    const goal = await prisma.goal.findUnique({
-      where: { id: goalId }
+  static async delete(
+    projectId: string,
+    goalId: string,
+    userId: string,
+    role: string
+  ) {
+
+    const goal = await prisma.goal.findFirst({
+      where: {
+        id: goalId,
+        projectId,
+        isDeleted: false
+      }
     })
 
-    if (!goal) throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404)
+    if (!goal) {
+      throw new AppError('GOAL_NOT_FOUND', 'Goal not found', 404)
+    }
 
     if (!this.isAdmin(role)) {
+
       const member = await this.getMember(projectId, userId)
 
-      if (!member) throw new AppError('FORBIDDEN', 'Access denied', 403)
-
-      const allowed =
-        member.role === ProjectRole.OWNER ||
-        member.role === ProjectRole.MANAGER ||
+      const canDelete =
+        this.hasRole(member.role, ProjectRole.MANAGER) ||
         goal.createdBy === userId
 
-      if (!allowed) {
-        throw new AppError('FORBIDDEN', 'Access denied', 403)
+      if (!canDelete) {
+        throw new AppError('FORBIDDEN', 'Insufficient permissions', 403)
       }
     }
 
@@ -189,7 +322,14 @@ class GoalService {
     await LogService.logAction(userId, 'GOAL_DELETED', 'Goal', goalId)
   }
 
-  static async updateStatus(projectId: string, goalId: string, userId: string, role: string, status: GoalStatus) {
+  static async updateStatus(
+    projectId: string,
+    goalId: string,
+    userId: string,
+    role: string,
+    status: GoalStatus
+  ) {
+
     const goal = await this.update(projectId, goalId, userId, role, { status })
 
     await LogService.logAction(userId, 'GOAL_STATUS_UPDATED', 'Goal', goalId)
@@ -197,48 +337,66 @@ class GoalService {
     return goal
   }
 
-  static async updateResponsible(projectId: string, goalId: string, userId: string, role: string, responsibleUserId: string | null) {
-    return this.update(projectId, goalId, userId, role, { responsibleUserId })
+  static async updateResponsible(
+    projectId: string,
+    goalId: string,
+    userId: string,
+    role: string,
+    responsibleUserId: string | null
+  ) {
+
+    const goal = await this.update(projectId, goalId, userId, role, {
+      responsibleUserId
+    })
+
+    await LogService.logAction(
+      userId,
+      'GOAL_RESPONSIBLE_UPDATED',
+      'Goal',
+      goalId
+    )
+
+    return goal
   }
 
   static async getMyGoals(projectId: string, userId: string) {
-    return prisma.goal.findMany({
-      where: {
-        projectId,
-        responsibleUserId: userId,
-        isDeleted: false
+
+  const goals = await prisma.goal.findMany({
+    where: {
+      projectId,
+      responsibleUserId: userId,
+      isDeleted: false
+    },
+
+    include: {
+      creator: {
+        select: {
+          id: true,
+          login: true,
+          email: true
+        }
       },
-      orderBy: { createdAt: 'desc' }
-    })
-  }
 
-  static async getSystemGoals() {
-    const page = 1
-    const limit = 50
-
-    const total = await prisma.goal.count({
-      where: { isDeleted: false }
-    })
-
-    const goals = await prisma.goal.findMany({
-      where: { isDeleted: false },
-      take: limit,
-      include: {
-        project: true,
-        creator: true
+      responsible: {
+        select: {
+          id: true,
+          login: true,
+          email: true
+        }
       },
-      orderBy: { createdAt: 'desc' }
-    })
 
-    return {
-      data: goals,
-      meta: {
-        total,
-        page,
-        limit
+      _count: {
+        select: {
+          tasks: true
+        }
       }
-    }
-  }
+    },
+
+    orderBy: { createdAt: 'desc' }
+  })
+
+  return goals.map(this.formatGoal)
+}
 }
 
 export default GoalService

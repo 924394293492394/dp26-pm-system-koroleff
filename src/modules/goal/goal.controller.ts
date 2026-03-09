@@ -96,13 +96,4 @@ export class GoalController {
       next(error)
     }
   }
-
-  static async getSystemGoals(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const result = await GoalService.getSystemGoals()
-      res.json(successResponse(result.data, result.meta))
-    } catch (error) {
-      next(error)
-    }
-  }
 }

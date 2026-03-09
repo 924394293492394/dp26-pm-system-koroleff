@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { AppError } from '../../middleware/error.middleware.js'
 import LogService from '../../log/log.service.js'
 import type {
   CreateTaskInput,
@@ -12,89 +13,51 @@ class TaskService {
     return role === 'ADMIN' || role === 'SUPER_ADMIN'
   }
 
+  private static async getProjectRole(
+    projectId: string,
+    userId: string,
+    role: string
+  ) {
+
+    if (this.isAdmin(role)) {
+      return { role: 'ADMIN' }
+    }
+
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        isDeleted: false
+      },
+      include: {
+        members: {
+          where: { userId }
+        }
+      }
+    })
+
+    if (!project) {
+      throw new AppError('PROJECT_NOT_FOUND', 'Project not found', 404);
+    }
+
+    if (project.createdBy === userId) {
+      return { role: 'OWNER' }
+    }
+
+    const member = project.members[0]
+
+    if (!member) {
+      throw new AppError('FORBIDDEN', 'Access denied', 403);
+    }
+
+    return { role: member.role }
+  }
+
   private static async assertProjectAccess(
     projectId: string,
     userId: string,
     role: string
   ) {
-    if (this.isAdmin(role)) return
-
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        isDeleted: false,
-        OR: [
-          { createdBy: userId },
-          {
-            members: {
-              some: { userId }
-            }
-          }
-        ]
-      }
-    })
-
-    if (!project) {
-      throw new Error('Access denied or project not found')
-    }
-  }
-
-  private static async assertOwner(
-    projectId: string,
-    userId: string,
-    role: string
-  ) {
-    if (this.isAdmin(role)) return
-
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        createdBy: userId,
-        isDeleted: false
-      }
-    })
-
-    if (!project) {
-      throw new Error('Only project owner can modify tasks')
-    }
-  }
-
-  static async getSystemTasks(filters: TaskFilterInput) {
-
-    const { page, limit, search, status, priority, assignedTo, goalId } = filters
-
-    const where: any = { isDeleted: false }
-
-    if (status) where.status = status
-    if (priority) where.priority = priority
-    if (assignedTo) where.assignedTo = assignedTo
-    if (goalId) where.goalId = goalId
-
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ]
-    }
-
-    const tasks = await prisma.task.findMany({
-      where,
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
-    })
-
-    const total = await prisma.task.count({ where })
-
-    return {
-      tasks,
-      meta: {
-        total,
-        pages: Math.ceil(total / limit),
-        currentPage: page,
-        perPage: limit
-      }
-    }
+    await this.getProjectRole(projectId, userId, role)
   }
 
   static async getMyTasksInProject(
@@ -126,6 +89,15 @@ class TaskService {
 
     const tasks = await prisma.task.findMany({
       where,
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            login: true,
+            email: true
+          }
+        }
+      },
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' }
@@ -134,7 +106,7 @@ class TaskService {
     const total = await prisma.task.count({ where })
 
     return {
-      tasks,
+      data: tasks,
       meta: {
         total,
         pages: Math.ceil(total / limit),
@@ -151,7 +123,11 @@ class TaskService {
     data: CreateTaskInput
   ) {
 
-    await this.assertOwner(projectId, userId, role)
+    const access = await this.getProjectRole(projectId, userId, role)
+
+    if (access.role === 'VIEWER') {
+      throw new AppError('FORBIDDEN', 'Viewer cannot create tasks', 403);
+    }
 
     const task = await prisma.task.create({
       data: {
@@ -196,6 +172,15 @@ class TaskService {
 
     const tasks = await prisma.task.findMany({
       where,
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            login: true,
+            email: true
+          }
+        }
+      },
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' }
@@ -204,7 +189,7 @@ class TaskService {
     const total = await prisma.task.count({ where })
 
     return {
-      tasks,
+      data: tasks,
       meta: {
         total,
         pages: Math.ceil(total / limit),
@@ -228,11 +213,20 @@ class TaskService {
         id: taskId,
         projectId,
         isDeleted: false
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            login: true,
+            email: true
+          }
+        }
       }
     })
 
     if (!task) {
-      throw new Error('Task not found')
+      throw new AppError('TASK_NOT_FOUND', 'Task not found', 404);
     }
 
     return task
@@ -246,14 +240,30 @@ class TaskService {
     data: UpdateTaskInput
   ) {
 
-    await this.assertOwner(projectId, userId, role)
+    const access = await this.getProjectRole(projectId, userId, role)
 
-    const existing = await prisma.task.findFirst({
-      where: { id: taskId, projectId, isDeleted: false }
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        projectId,
+        isDeleted: false
+      }
     })
 
-    if (!existing) {
-      throw new Error('Task not found')
+    if (!task) {
+      throw new AppError('TASK_NOT_FOUND', 'Task not found', 404);
+    }
+
+    if (['OWNER', 'MANAGER', 'ADMIN'].includes(access.role)) {
+
+    } else if (access.role === 'MEMBER') {
+
+      if (task.createdBy !== userId && task.assignedTo !== userId) {
+        throw new AppError('FORBIDDEN', 'You cannot update this task', 403);
+      }
+
+    } else {
+      throw new AppError('FORBIDDEN', 'Viewer cannot update tasks', 403);
     }
 
     const updated = await prisma.task.update({
@@ -273,14 +283,30 @@ class TaskService {
     role: string
   ) {
 
-    await this.assertOwner(projectId, userId, role)
+    const access = await this.getProjectRole(projectId, userId, role)
 
-    const existing = await prisma.task.findFirst({
-      where: { id: taskId, projectId, isDeleted: false }
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        projectId,
+        isDeleted: false
+      }
     })
 
-    if (!existing) {
-      throw new Error('Task not found')
+    if (!task) {
+      throw new AppError('TASK_NOT_FOUND', 'Task not found', 404);
+    }
+
+    if (['OWNER', 'MANAGER', 'ADMIN'].includes(access.role)) {
+
+    } else if (access.role === 'MEMBER') {
+
+      if (task.createdBy !== userId) {
+        throw new AppError('FORBIDDEN', 'You cannot delete this task', 403);
+      }
+
+    } else {
+      throw new AppError('FORBIDDEN', 'Viewer cannot delete tasks', 403);
     }
 
     await prisma.task.update({
