@@ -7,6 +7,7 @@ const goalRouter = Router()
 goalRouter.use(authMiddleware)
 
 goalRouter.get('/:projectId/goals/my', GoalController.getMyGoals)
+goalRouter.post('/:projectId/goals', GoalController.create)
 goalRouter.get('/:projectId/goals', GoalController.getAll)
 goalRouter.get('/:projectId/goals/:goalId', GoalController.getOne)
 goalRouter.patch('/:projectId/goals/:goalId', GoalController.update)
