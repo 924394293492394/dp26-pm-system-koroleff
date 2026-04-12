@@ -1,5 +1,12 @@
 import axios from "axios";
 
+let setGlobalLoading;
+
+// внедрение loader из контекста
+export const injectLoader = (_setLoading) => {
+    setGlobalLoading = _setLoading;
+};
+
 const api = axios.create({
     baseURL: "http://localhost:5000",
     headers: {
@@ -9,6 +16,8 @@ const api = axios.create({
 
 // подстановка токена
 api.interceptors.request.use((config) => {
+    if (setGlobalLoading) setGlobalLoading(true);
+
     const token = localStorage.getItem("token");
 
     if (token) {
@@ -20,11 +29,17 @@ api.interceptors.request.use((config) => {
 
 // обработка ошибок
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        if (setGlobalLoading) setGlobalLoading(false);
+        return response;
+    },
     (error) => {
+        if (setGlobalLoading) setGlobalLoading(false);
+
         // при стат 401 релог
-        if (error.response && error.response.status === 401) {
+        if (error.response?.status === 401) {
             localStorage.removeItem("token");
+            window.location.href = "/login";
         }
 
         return Promise.reject(error);

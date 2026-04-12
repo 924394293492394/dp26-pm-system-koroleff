@@ -1,29 +1,77 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
 import { AuthProvider } from "./context/AuthContext";
+import { LoaderProvider } from "./context/LoaderContext";
+import { injectLoader } from "./utils/api";
+import { useEffect } from "react";
+import { useLoader } from "./context/LoaderContext";
+
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 
-function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <h1>Dashboard</h1>
-              </ProtectedRoute>
-            }
-          />
+import Navbar from "./components/Navbar";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
-          <Route path="/login" element={<h1>Login</h1>} />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  );
+import GlobalLoader from "./components/common/GlobalLoader";
+
+function AppInner() {
+    const { setLoading } = useLoader();
+
+    useEffect(() => {
+        injectLoader(setLoading);
+    }, [setLoading]);
+
+    return (
+        <>
+            <GlobalLoader />
+
+            <Router>
+                <Routes>
+                    <Route
+                        path="/"
+                        element={
+                            <ProtectedRoute>
+                                <>
+                                    <Navbar />
+                                    <h1>Dashboard</h1>
+                                </>
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/login"
+                        element={
+                            <PublicRoute>
+                                <LoginPage />
+                            </PublicRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/register"
+                        element={
+                            <PublicRoute>
+                                <RegisterPage />
+                            </PublicRoute>
+                        }
+                    />
+                </Routes>
+            </Router>
+        </>
+    );
 }
 
-export default App;
+export default function App() {
+    return (
+        <LoaderProvider>
+            <AuthProvider>
+                <AppInner />
+            </AuthProvider>
+        </LoaderProvider>
+    );
+}
 
 // import logo from './logo.svg';
 // import './App.css';

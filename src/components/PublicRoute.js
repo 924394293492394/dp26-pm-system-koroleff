@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
-const ProtectedRoute = ({ children }) => {
+const PublicRoute = ({ children }) => {
     const { user, initialized } = useAuth();
 
     // пока проверяем auth, ничего не показываем
@@ -9,13 +9,12 @@ const ProtectedRoute = ({ children }) => {
         return <div style={{ padding: 50 }}>Loading...</div>;
     }
 
-    // если не авторизован, на логин
-    if (!user) {
-        return <Navigate to="/login" replace />;
+    // если уже авторизован, переход на главную
+    if (user) {
+        return <Navigate to="/" replace />;
     }
 
-    // если авторизован, показываем страницу
     return children;
 };
 
-export default ProtectedRoute;
+export default PublicRoute;

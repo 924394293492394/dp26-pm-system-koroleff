@@ -9,36 +9,42 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [initialized, setInitialized] = useState(false);
 
     // проверяем при входе
     useEffect(() => {
-        const checkAuth = async () => {
+        const init = async () => {
             try {
-                const data = await getMeRequest();
-                setUser(data);
-            } catch (err) {
+                const token = localStorage.getItem("token");
+
+                if (token) {
+                    const userData = await getMeRequest();
+                    setUser(userData);
+                }
+            } catch (e) {
+                localStorage.removeItem("token");
                 setUser(null);
             } finally {
-                setLoading(false);
+                setInitialized(true);
             }
         };
 
-        checkAuth();
+        init();
     }, []);
 
     // лог
     const login = async (formData) => {
         const data = await loginRequest(formData);
+
         localStorage.setItem("token", data.token);
-        setUser(data.user);
+
+        const userData = await getMeRequest();
+        setUser(userData);
     };
 
     // рег
     const register = async (formData) => {
-        const data = await registerRequest(formData);
-        localStorage.setItem("token", data.token);
-        setUser(data.user);
+        return await registerRequest(formData);
     };
 
     // вых
@@ -49,7 +55,13 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider
-            value={{ user, login, register, logout, loading }}
+            value={{
+                user,
+                login,
+                register,
+                logout,
+                initialized,
+            }}
         >
             {children}
         </AuthContext.Provider>
