@@ -4,7 +4,8 @@ import ProfileService from './profile.service.js'
 import {
   updateProfileSchema,
   userParamsSchema,
-  userQuerySchema
+  userQuerySchema,
+  userSearchQuerySchema
 } from './profile.schema.js'
 import { successResponse } from '../../common/utils/response.js'
 
@@ -61,6 +62,14 @@ export class ProfileController {
         query
       )
       res.json(successResponse(result.data, result.meta))
+    } catch (e) { next(e) }
+  }
+
+  static async searchUsers(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const query = userSearchQuerySchema.parse(req.query)
+      const result = await ProfileService.searchUsers(query)
+      res.json(successResponse(result))
     } catch (e) { next(e) }
   }
 }

@@ -17,7 +17,13 @@ export const updateProjectSchema = z.object({
 
 export const projectFilterSchema = z.object({
   search: z.string().optional(),
-  isArchived: z.coerce.boolean().optional(),
+  sort: z.string().optional(),
+  isArchived: z.preprocess((val) => {
+    if (val === undefined || val === '') return undefined;
+    if (val === 'true'  || val === true)  return true;
+    if (val === 'false' || val === false) return false;
+    return undefined;
+  }, z.boolean().optional()),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(10)
 });

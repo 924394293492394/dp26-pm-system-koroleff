@@ -201,6 +201,51 @@ class ProfileService {
       }
     }
   }
+
+  static async searchUsers(query: { search: string; limit?: number }) {
+    const { search, limit = 10 } = query;
+
+    if (!search || search.trim().length < 2) {
+      return { users: [] };
+    }
+
+    const users = await prisma.userAuth.findMany({
+      where: {
+        OR: [
+          { login: { contains: search.trim(), mode: 'insensitive' } },
+          { email: { contains: search.trim(), mode: 'insensitive' } },
+        ],
+      },
+      take: Math.min(Number(limit), 20), // защита от слишком большого limit
+      select: {
+        id: true,
+        login: true,
+        email: true,
+        profile: {
+          select: {
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            position: true,
+          }
+        }
+      },
+      orderBy: { login: 'asc' },
+    });
+
+    return {
+      users: users.map(u => ({
+        id: u.id,
+        login: u.login,
+        email: u.email,
+        firstName: u.profile?.firstName ?? null,
+        lastName: u.profile?.lastName ?? null,
+        avatarUrl: u.profile?.avatarUrl ?? null,
+        position: u.profile?.position ?? null,
+      }))
+    };
+  }
+
 }
 
 export default ProfileService

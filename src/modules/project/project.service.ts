@@ -7,6 +7,8 @@ import type {
 } from './project.schema.js';
 import { AppError } from '../../middleware/error.middleware.js';
 
+const MAX_MEMBERS = 50;
+
 class ProjectService {
 
   private static isAdmin(role: string) {
@@ -85,12 +87,16 @@ class ProjectService {
     userId: string,
     filters: ProjectFilterInput
   ) {
-    const { page, limit, search } = filters;
+    const { page, limit, search, isArchived, sort } = filters;
 
     const where: any = {
       isDeleted: false,
       createdBy: userId
     };
+
+    if (typeof isArchived === 'boolean') {
+      where.isArchived = isArchived;
+    }
 
     if (search) {
       where.AND = [
@@ -103,19 +109,44 @@ class ProjectService {
       ];
     }
 
+    const orderBy = sort === "activity_desc"
+      ? ({ updatedAt: "desc" } as const)
+      : sort === "activity_asc"
+        ? ({ updatedAt: "asc" } as const)
+        : sort === "createdAt_asc"
+          ? ({ createdAt: "asc" } as const)
+          : ({ createdAt: "desc" } as const);
+
     const projects = await prisma.project.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: {
-        createdAt: 'desc'
+      orderBy,
+      include: {
+        members: {
+          where: { userId },
+          select: { role: true }
+        },
+        _count: {
+          select: {
+            members: true,
+            tasks: true,
+            goals: true
+          }
+        }
       }
     });
 
     const total = await prisma.project.count({ where });
 
     return {
-      projects,
+      projects: projects.map(p => ({
+        ...p,
+        role: p.members[0]?.role || 'VIEWER',
+        membersCount: p._count.members,
+        tasksCount: p._count.tasks,
+        goalsCount: p._count.goals
+      })),
       meta: {
         total,
         pages: Math.ceil(total / limit),
@@ -130,11 +161,15 @@ class ProjectService {
     role: string,
     filters: ProjectFilterInput
   ) {
-    const { page, limit, search } = filters;
+    const { page, limit, search, isArchived, sort } = filters;
 
     const where: any = {
       isDeleted: false
     };
+
+    if (typeof isArchived === 'boolean') {
+      where.isArchived = isArchived;
+    }
 
     if (!this.isAdmin(role)) {
       where.OR = [
@@ -158,19 +193,42 @@ class ProjectService {
       ];
     }
 
+    const orderBy =
+      sort === "activity_desc" ? ({ updatedAt: "desc" } as const) :
+        sort === "activity_asc" ? ({ updatedAt: "asc" } as const) :
+          sort === "createdAt_asc" ? ({ createdAt: "asc" } as const) :
+            ({ createdAt: "desc" } as const);
+
     const projects = await prisma.project.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: {
-        createdAt: 'desc'
+      orderBy,
+      include: {
+        members: {
+          where: { userId },
+          select: { role: true }
+        },
+        _count: {
+          select: {
+            members: true,
+            tasks: true,
+            goals: true
+          }
+        }
       }
     });
 
     const total = await prisma.project.count({ where });
 
     return {
-      projects,
+      projects: projects.map(p => ({
+        ...p,
+        role: p.members[0]?.role || 'VIEWER',
+        membersCount: p._count.members,
+        tasksCount: p._count.tasks,
+        goalsCount: p._count.goals
+      })),
       meta: {
         total,
         pages: Math.ceil(total / limit),
@@ -188,9 +246,15 @@ class ProjectService {
     await this.assertProjectAccess(projectId, userId, role);
 
     const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        isDeleted: false
+      where: { id: projectId, isDeleted: false },
+      include: {
+        members: {
+          where: { userId },
+          select: { role: true }
+        },
+        _count: {
+          select: { members: true, tasks: true, goals: true }
+        }
       }
     });
 
@@ -198,7 +262,13 @@ class ProjectService {
       throw new AppError('NOT_FOUND', 'Project not found', 404);
     }
 
-    return project;
+    return {
+      ...project,
+      role: project.members[0]?.role || 'VIEWER',
+      membersCount: project._count.members,
+      tasksCount: project._count.tasks,
+      goalsCount: project._count.goals,
+    };
   }
 
   static async update(

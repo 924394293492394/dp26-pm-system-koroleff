@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const updateProfileSchema = z.object({
   firstName: z.string().min(2).optional(),
   lastName: z.string().min(2).optional(),
-  position: z.string().optional(),
+  position: z.string().max(100).optional(),
   avatarUrl: z.string().url().optional()
 })
 
@@ -17,5 +17,11 @@ export const userQuerySchema = z.object({
   search: z.string().optional()
 })
 
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
-export type UserQuery = z.infer<typeof userQuerySchema>
+export const userSearchQuerySchema = z.object({
+  search: z.string().min(2, 'Минимум 2 символа'),
+  limit: z.coerce.number().min(1).max(20).default(10)
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UserQuery = z.infer<typeof userQuerySchema>;
+export type UserSearchQuery = z.infer<typeof userSearchQuerySchema>;
