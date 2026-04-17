@@ -9,68 +9,76 @@ import { useLoader } from "./context/LoaderContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 
-import Navbar from "./components/Navbar";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 
+import MainLayout from "./components/layout/MainLayout";
 import GlobalLoader from "./components/common/GlobalLoader";
 
+import Dashboard from "./components/Dashboard";
+import ProjectsPage from "./modules/projects/ProjectsPage";
+import ProjectDetailsPage from "./modules/projects/ProjectDetailsPage";
+
 function AppInner() {
-    const { setLoading } = useLoader();
+  const { setLoading } = useLoader();
 
-    useEffect(() => {
-        injectLoader(setLoading);
-    }, [setLoading]);
+  useEffect(() => {
+    injectLoader(setLoading);
+  }, [setLoading]);
 
-    return (
-        <>
-            <GlobalLoader />
+  return (
+    <>
+      <GlobalLoader />
 
-            <Router>
-                <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            <ProtectedRoute>
-                                <>
-                                    <Navbar />
-                                    <h1>Dashboard</h1>
-                                </>
-                            </ProtectedRoute>
-                        }
-                    />
+      <Router>
+        <Routes>
 
-                    <Route
-                        path="/login"
-                        element={
-                            <PublicRoute>
-                                <LoginPage />
-                            </PublicRoute>
-                        }
-                    />
+          {/* PRIVATE */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+          </Route>
 
-                    <Route
-                        path="/register"
-                        element={
-                            <PublicRoute>
-                                <RegisterPage />
-                            </PublicRoute>
-                        }
-                    />
-                </Routes>
-            </Router>
-        </>
-    );
+          {/* PUBLIC */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            }
+          />
+
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <RegisterPage />
+              </PublicRoute>
+            }
+          />
+
+        </Routes>
+      </Router>
+    </>
+  );
 }
 
 export default function App() {
-    return (
-        <LoaderProvider>
-            <AuthProvider>
-                <AppInner />
-            </AuthProvider>
-        </LoaderProvider>
-    );
+  return (
+    <LoaderProvider>
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
+    </LoaderProvider>
+  );
 }
 
 // import logo from './logo.svg';
