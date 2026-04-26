@@ -85,7 +85,6 @@ const ProjectSettingsDrawer = ({ open, onClose, project, saving, onUpdate, onTog
         />
       )}
 
-      {/* основная информация */}
       <Section title="Основная информация" hint="Название и описание отображаются во всех представлениях проекта">
         <Form form={form} layout="vertical" disabled={!isOwner}>
           <Form.Item
@@ -124,7 +123,6 @@ const ProjectSettingsDrawer = ({ open, onClose, project, saving, onUpdate, onTog
 
       <Divider />
 
-      {/* видимость */}
       <Section
         title="Видимость"
         hint="Архивированные проекты скрыты из основного списка, но остаются доступны по прямой ссылке"
@@ -156,7 +154,6 @@ const ProjectSettingsDrawer = ({ open, onClose, project, saving, onUpdate, onTog
         )}
       </Section>
 
-      {/* опасная зона (удаление)*/}
       {isOwner && (
         <>
           <Divider />

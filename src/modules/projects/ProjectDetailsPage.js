@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import {
   Button, Tag, Typography, Space, Skeleton,
@@ -15,6 +15,8 @@ import { useProject } from "./hooks/useProject";
 import { useAuth } from "../../context/AuthContext";
 import ProjectSettingsDrawer from "./components/ProjectSettingsDrawer";
 import MembersTab from "./components/MembersTab";
+import GoalsTab from "../goals/components/GoalsTab";
+import TasksTab from "../tasks/components/TasksTab";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -43,9 +45,12 @@ const ProjectDetailsPage = () => {
   const { user } = useAuth();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") || "overview"
+  );
 
-  const { project, loading, saving, update, toggleArchive, remove } = useProject(id);
+  const { project, loading, saving, update, toggleArchive, remove, refetch } = useProject(id);
 
   if (loading) {
     return <div style={{ padding: "24px 0" }}><Skeleton active paragraph={{ rows: 8 }} /></div>;
@@ -145,26 +150,50 @@ const ProjectDetailsPage = () => {
         <MembersTab
           projectId={id}
           currentUserRole={project.role}
-          currentUserId={user?.userId}
+          currentUserId={user?.id || user?.userId}
         />
       ),
     },
     {
       key: "goals",
-      label: <Space><AimOutlined />Цели</Space>,
-      disabled: true,
-      children: null,
+      label: (
+        <Space>
+          <AimOutlined />
+          Цели
+          {project.goalsCount > 0 && <Tag style={{ marginLeft: 2 }}>{project.goalsCount}</Tag>}
+        </Space>
+      ),
+      children: (
+        <GoalsTab
+          projectId={id}
+          currentUserRole={project.role}
+          currentUserId={user?.id || user?.userId}
+          onGoalCountChange={refetch}
+        />
+      ),
     },
     {
       key: "tasks",
-      label: <Space><CheckSquareOutlined />Задачи</Space>,
-      disabled: true,
-      children: null,
+      label: (
+        <Space>
+          <CheckSquareOutlined />
+          Задачи
+          {project.tasksCount > 0 && <Tag style={{ marginLeft: 2 }}>{project.tasksCount}</Tag>}
+        </Space>
+      ),
+      children: (
+        <TasksTab
+          projectId={id}
+          currentUserRole={project.role}
+          currentUserId={user?.id || user?.userId}
+          onTaskCountChange={refetch}
+        />
+      ),
     },
   ];
 
   return (
-    <div style={{ maxWidth: 960 }}>
+    <div style={{ maxWidth: "100%" }}>
       {/* хлеб крошки */}
       <Breadcrumb
         style={{ marginBottom: 16 }}

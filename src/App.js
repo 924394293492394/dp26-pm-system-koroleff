@@ -18,6 +18,10 @@ import GlobalLoader from "./components/common/GlobalLoader";
 import Dashboard from "./components/Dashboard";
 import ProjectsPage from "./modules/projects/ProjectsPage";
 import ProjectDetailsPage from "./modules/projects/ProjectDetailsPage";
+// ------------
+import GoalsPage from "./modules/goals/GoalsPage";
+import TasksPage from "./modules/tasks/TasksPage";
+import TasksAllPage from "./modules/tasks/TasksAllPage";
 
 function AppInner() {
   const { setLoading } = useLoader();
@@ -44,6 +48,9 @@ function AppInner() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+            <Route path="/goals" element={<GoalsPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/projects/:id/tasks/all" element={<TasksAllPage />} />
           </Route>
 
           {/* PUBLIC */}
