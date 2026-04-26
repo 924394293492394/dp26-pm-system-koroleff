@@ -13,7 +13,12 @@ taskRouter.get('/:projectId/tasks/:taskId', TaskController.getOne)
 taskRouter.patch('/:projectId/tasks/:taskId', TaskController.update)
 taskRouter.delete('/:projectId/tasks/:taskId', TaskController.delete)
 
-export { taskRouter }
+const globalTaskRouter = Router()
+
+globalTaskRouter.use(authMiddleware)
+globalTaskRouter.get('/', TaskController.getAllGlobal)
+
+export { taskRouter, globalTaskRouter }
 
 //          cm-08/03/2026 Korolev E.V.
 //  доб. изменение тасков для создателя и ответственного привязанной цели

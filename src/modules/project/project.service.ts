@@ -130,8 +130,8 @@ class ProjectService {
         _count: {
           select: {
             members: true,
-            tasks: true,
-            goals: true
+            tasks: { where: { isDeleted: false } },
+            goals: { where: { isDeleted: false } },
           }
         }
       }
@@ -212,8 +212,8 @@ class ProjectService {
         _count: {
           select: {
             members: true,
-            tasks: true,
-            goals: true
+            tasks: { where: { isDeleted: false } },
+            goals: { where: { isDeleted: false } },
           }
         }
       }
@@ -253,7 +253,11 @@ class ProjectService {
           select: { role: true }
         },
         _count: {
-          select: { members: true, tasks: true, goals: true }
+          select: {
+            members: true,
+            tasks: { where: { isDeleted: false } },
+            goals: { where: { isDeleted: false } },
+          }
         }
       }
     });

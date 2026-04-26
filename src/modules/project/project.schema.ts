@@ -20,7 +20,7 @@ export const projectFilterSchema = z.object({
   sort: z.string().optional(),
   isArchived: z.preprocess((val) => {
     if (val === undefined || val === '') return undefined;
-    if (val === 'true'  || val === true)  return true;
+    if (val === 'true' || val === true) return true;
     if (val === 'false' || val === false) return false;
     return undefined;
   }, z.boolean().optional()),

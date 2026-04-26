@@ -216,7 +216,7 @@ class ProfileService {
           { email: { contains: search.trim(), mode: 'insensitive' } },
         ],
       },
-      take: Math.min(Number(limit), 20), // защита от слишком большого limit
+      take: Math.min(Number(limit), 20),
       select: {
         id: true,
         login: true,

@@ -9,6 +9,7 @@ import {
   taskParamsSchema,
   taskFilterSchema
 } from './task.schema.js'
+import z from 'zod'
 
 export class TaskController {
 
@@ -22,7 +23,7 @@ export class TaskController {
         req.user!.role,
         filters
       )
-      res.json(successResponse(result.data, result.meta))
+      res.json(successResponse(result))
     } catch (error) {
       next(error)
     }
@@ -54,7 +55,7 @@ export class TaskController {
         req.user!.role,
         filters
       )
-      res.json(successResponse(result.data, result.meta))
+      res.json(successResponse(result))
     } catch (error) {
       next(error)
     }
@@ -105,6 +106,18 @@ export class TaskController {
     } catch (error) {
       next(error)
     }
+  }
+
+  static async getAllGlobal(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const filters = taskFilterSchema
+        .extend({
+          myOnly: z.preprocess(v => v === 'true' || v === true, z.boolean().optional())
+        })
+        .parse(req.query)
+      const result = await TaskService.getAllGlobal(req.user!.userId, req.user!.role, filters)
+      res.json(successResponse(result))
+    } catch (error) { next(error) }
   }
 
 }

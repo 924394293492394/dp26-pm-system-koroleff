@@ -16,7 +16,8 @@ export const createTaskSchema = z.object({
   status: z.nativeEnum(TaskStatus).optional(),
   priority: z.nativeEnum(TaskPriority).optional(),
   goalId: z.string().uuid().optional(),
-  assignedTo: z.string().uuid().optional()
+  assignedTo: z.string().uuid().optional(),
+  dueDate: z.string().datetime().optional(),
 })
 
 export const updateTaskSchema = z.object({
@@ -25,7 +26,8 @@ export const updateTaskSchema = z.object({
   status: z.nativeEnum(TaskStatus).optional(),
   priority: z.nativeEnum(TaskPriority).optional(),
   goalId: z.string().uuid().nullable().optional(),
-  assignedTo: z.string().uuid().nullable().optional()
+  assignedTo: z.string().uuid().nullable().optional(),
+  dueDate: z.string().datetime().nullable().optional(),
 })
 
 export const paginationSchema = z.object({
