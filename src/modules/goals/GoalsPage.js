@@ -17,7 +17,6 @@ import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
 
-// ── Хук данных ───
 const useGlobalGoals = (myOnly) => {
     const [goals, setGoals] = useState([]);
     const [meta, setMeta] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });

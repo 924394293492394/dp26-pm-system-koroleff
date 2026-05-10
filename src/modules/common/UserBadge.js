@@ -1,19 +1,11 @@
 import { Avatar, Tooltip, Space } from "antd";
 import { UserOutlined, MailOutlined } from "@ant-design/icons";
+import { getAvatarSrc, getAvatarColor, getAvatarInitial } from "../../utils/avatar";
 
-// Палитра цветов аватарок — стабильна по первой букве логина
-const PALETTE = ["#1677ff", "#52c41a", "#722ed1", "#fa8c16", "#eb2f96", "#13c2c2", "#f5222d", "#08979c"];
+// экспортируем для обратной совместимости (taskComments импортирует напрямую)
+export const getUserColor   = (user) => getAvatarColor(user?.login || user?.email);
+export const getUserInitial = (user) => getAvatarInitial(user?.login || user?.email);
 
-export const getUserColor = (user) => {
-  const key = user?.login || user?.email || "?";
-  return PALETTE[(key.charCodeAt(0) || 0) % PALETTE.length];
-};
-
-export const getUserInitial = (user) => {
-  return (user?.login || user?.email || "?")[0].toUpperCase();
-};
-
-// Tooltip-контент — логин + email + имя если есть
 const UserTooltipContent = ({ user }) => (
   <div style={{ fontSize: 12, lineHeight: 1.6 }}>
     <div style={{ fontWeight: 600, marginBottom: 2 }}>@{user.login}</div>
@@ -31,21 +23,12 @@ const UserTooltipContent = ({ user }) => (
   </div>
 );
 
-/**
- * UserBadge — единый компонент отображения пользователя
- *
- * @param {object}  user        — объект пользователя (login, email, profile)
- * @param {string}  emptyLabel  — текст если user=null (по умолчанию "Не назначен")
- * @param {number}  avatarSize  — размер аватарки (по умолчанию 18)
- * @param {boolean} showLogin   — показывать логин рядом с аватаркой (по умолчанию true)
- * @param {string}  fontSize    — размер текста логина (по умолчанию "12px")
- */
 const UserBadge = ({
   user,
   emptyLabel = "Не назначен",
   avatarSize = 18,
-  showLogin = true,
-  fontSize = "12px",
+  showLogin  = true,
+  fontSize   = "12px",
 }) => {
   if (!user) {
     return (
@@ -56,7 +39,6 @@ const UserBadge = ({
             background: "#f0f0f0",
             border: "1px dashed #d9d9d9",
             color: "#bfbfbf",
-            fontSize: avatarSize * 0.55,
             flexShrink: 0,
           }}
           icon={<UserOutlined style={{ fontSize: avatarSize * 0.55 }} />}
@@ -70,31 +52,29 @@ const UserBadge = ({
     );
   }
 
-  const color = getUserColor(user);
-  const initial = getUserInitial(user);
+  const login   = user?.login || user?.email;
+  const color   = getAvatarColor(login);
+  const initial = getAvatarInitial(login);
+  const src     = getAvatarSrc(user?.profile?.avatarUrl);
 
   return (
-    <Tooltip
-      title={<UserTooltipContent user={user} />}
-      placement="top"
-    >
+    <Tooltip title={<UserTooltipContent user={user} />} placement="top">
       <Space size={5} style={{ cursor: "default", fontSize }}>
         <Avatar
           size={avatarSize}
+          src={src || undefined}
           style={{
-            background: color,
+            background: src ? "transparent" : color,
             color: "#fff",
             fontSize: avatarSize * 0.55,
             fontWeight: 600,
             flexShrink: 0,
           }}
         >
-          {initial}
+          {!src && initial}
         </Avatar>
         {showLogin && (
-          <span style={{ color: "#595959", fontSize }}>
-            {user.login}
-          </span>
+          <span style={{ color: "#595959", fontSize }}>{user.login}</span>
         )}
       </Space>
     </Tooltip>

@@ -1,5 +1,8 @@
-import { Tag, Typography, Space } from "antd";
+import { Tag, Typography, Space, Tooltip } from "antd";
 import { CalendarOutlined, CommentOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { ArrowsAltOutlined } from "@ant-design/icons";
+import { Button } from "antd";
 import TaskStatusTag from "./TaskStatusTag";
 import TaskPriorityBadge from "./TaskPriorityBadge";
 import UserBadge from "../../common/UserBadge";
@@ -138,8 +141,8 @@ const TaskCardCompact = ({ task, onClick }) => {
   );
 };
 
-// ─── СТАНДАРТНЫЙ режим — доска (isBoard=true) и список (isBoard=false) ───
-const TaskCardStandard = ({ task, onClick, isBoard = false }) => {
+const TaskCardStandard = ({ task, onClick, isBoard = false, projectId }) => {
+  const navigate = useNavigate();
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "DONE";
   const isDone = task.status === "DONE";
   const borderColor = BORDER_BY_STATUS[task.status] || "#d9d9d9";
@@ -172,33 +175,53 @@ const TaskCardStandard = ({ task, onClick, isBoard = false }) => {
     >
       {isDone && <DoneOverlay />}
 
-      {/* Строка 1: статус + overdue + цель | приоритет — БЕЗ align*/}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <Space size={6} wrap>
-          <TaskStatusTag status={task.status} />
-          {isOverdue && (
-            <Tag color="error" style={{ margin: 0, fontSize: 11 }}>⏰ Просрочена</Tag>
-          )}
-          {task.goal && (
-            <Tag
-              color="blue"
-              style={{
-                margin: 0,
-                fontSize: 11,
-                maxWidth: 130,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                verticalAlign: "middle",
-              }}
-              title={task.goal.title}
-            >
-              🎯 {task.goal.title}
-            </Tag>
-          )}
-        </Space>
-        <TaskPriorityBadge priority={task.priority} />
-      </div>
+{/* Строка 1: статус + overdue + цель | кнопка страницы + приоритет */}
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+  <Space size={6} wrap>
+    <TaskStatusTag status={task.status} />
+    {isOverdue && (
+      <Tag color="error" style={{ margin: 0, fontSize: 11 }}>⏰ Просрочена</Tag>
+    )}
+    {task.goal && (
+      <Tag
+        color="blue"
+        style={{
+          margin: 0, fontSize: 11, maxWidth: 130,
+          overflow: "hidden", textOverflow: "ellipsis",
+          whiteSpace: "nowrap", verticalAlign: "middle",
+        }}
+        title={task.goal.title}
+      >
+        🎯 {task.goal.title}
+      </Tag>
+    )}
+  </Space>
+
+  {/* Правая часть: кнопка открытия страницы + приоритет */}
+  <Space size={4} style={{ flexShrink: 0 }}>
+    {projectId && (
+      <Tooltip title="Открыть страницу задачи">
+        <Button
+          type="text"
+          size="small"
+          icon={<ArrowsAltOutlined style={{ fontSize: 11 }} />}
+          onClick={e => {
+            e.stopPropagation();
+            navigate(`/projects/${projectId}/tasks/${task.id}`);
+          }}
+          style={{
+            width: 22, height: 22, padding: 0,
+            color: "#d9d9d9",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = "#1677ff"}
+          onMouseLeave={e => e.currentTarget.style.color = "#d9d9d9"}
+        />
+      </Tooltip>
+    )}
+    <TaskPriorityBadge priority={task.priority} />
+  </Space>
+</div>
 
       {/* Строка 2: название — макс 2 строки */}
       <Text strong style={{
@@ -241,7 +264,6 @@ const TaskCardStandard = ({ task, onClick, isBoard = false }) => {
         gap: 6,
       }}>
         {isBoard ? (
-          // ── ДОСКА: исполнитель СЛЕВА, дедлайн+комм СПРАВА ──
           <>
             <UserBadge
               user={task.assignee}
@@ -272,7 +294,6 @@ const TaskCardStandard = ({ task, onClick, isBoard = false }) => {
             </Space>
           </>
         ) : (
-          // ── СПИСОК: дедлайн СЛЕВА рядом с исполнителем, комм СПРАВА ──
           <>
             <Space size={14} wrap>
               <UserBadge
@@ -308,10 +329,9 @@ const TaskCardStandard = ({ task, onClick, isBoard = false }) => {
   );
 };
 
-// ─── Экспорт ───
-const TaskCard = ({ task, onClick, compact = false, isBoard = false }) => {
+const TaskCard = ({ task, onClick, compact = false, isBoard = false, projectId }) => {
   if (compact) return <TaskCardCompact task={task} onClick={onClick} />;
-  return <TaskCardStandard task={task} onClick={onClick} isBoard={isBoard} />;
+  return <TaskCardStandard task={task} onClick={onClick} isBoard={isBoard} projectId={projectId} />;
 };
 
 export default TaskCard;

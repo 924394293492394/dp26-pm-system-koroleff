@@ -15,16 +15,6 @@ const BORDER_COLOR = {
   PLANNED: "#faad14",
 };
 
-const getAvatarProps = (user) => {
-  if (!user) return { label: "?", color: "#d9d9d9" };
-  const name = user.profile?.firstName
-    ? `${user.profile.firstName} ${user.profile.lastName || ""}`.trim()
-    : user.login;
-  const palette = ["#1677ff", "#52c41a", "#722ed1", "#fa8c16", "#eb2f96", "#13c2c2", "#f5222d"];
-  const color = palette[(name.charCodeAt(0) || 0) % palette.length];
-  return { label: name[0].toUpperCase(), fullName: name, color };
-};
-
 const CancelledOverlay = () => (
   <svg style={{
     position: "absolute", inset: 0,
@@ -49,7 +39,7 @@ const GoalCard = ({ goal, onClick, onPin, showProject = false }) => {
   const borderColor = BORDER_COLOR[goal.status] || "#d9d9d9";
   const isCancelled = goal.status === "CANCELLED";
   const hasResponsible = !!goal.responsible;
-  const avatarProps = getAvatarProps(goal.responsible);
+
   const deadlineLabel = goal.dueDate
     ? new Date(goal.dueDate).toLocaleDateString("ru-RU")
     : null;
@@ -87,6 +77,7 @@ const GoalCard = ({ goal, onClick, onPin, showProject = false }) => {
             <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>📁 {goal.project.name}</Tag>
           )}
         </Space>
+
         <Tooltip title={goal.isPinned ? "Открепить" : "Закрепить"}>
           <Button
             type="text"
@@ -102,37 +93,45 @@ const GoalCard = ({ goal, onClick, onPin, showProject = false }) => {
       </div>
 
       {/* Строка 2: заголовок */}
-      <Text strong style={{
-        fontSize: 14,
-        display: "block",
-        marginBottom: goal.description ? 4 : 12,
-        textDecoration: isCancelled ? "line-through" : "none",
-        color: isCancelled ? "#8c8c8c" : undefined,
-      }}>
+      <Text
+        strong
+        style={{
+          fontSize: 14,
+          display: "block",
+          marginBottom: goal.description ? 4 : 12,
+          textDecoration: isCancelled ? "line-through" : "none",
+          color: isCancelled ? "#8c8c8c" : undefined,
+        }}
+      >
         {goal.title}
       </Text>
 
       {/* Строка 3: описание */}
       {goal.description && (
-        <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 12 }}
-          ellipsis={{ tooltip: goal.description }}>
+        <Text
+          type="secondary"
+          style={{ fontSize: 12, display: "block", marginBottom: 12 }}
+          ellipsis={{ tooltip: goal.description }}
+        >
           {goal.description}
         </Text>
       )}
 
       {/* Строка 4: мета */}
-      <div style={{
-        marginTop: "auto",
-        paddingTop: 8,
-        borderTop: "1px solid #f5f5f5",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: 6,
-      }}>
+      <div
+        style={{
+          marginTop: "auto",
+          paddingTop: 8,
+          borderTop: "1px solid #f5f5f5",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 6,
+        }}
+      >
 
-        {/* ответственный + дедлайн*/}
+        {/* ответственный + дедлайн */}
         <Space size={14} wrap style={{ fontSize: 12 }}>
 
           <UserBadge
@@ -143,13 +142,23 @@ const GoalCard = ({ goal, onClick, onPin, showProject = false }) => {
           />
 
           <Space size={4}>
-            <CalendarOutlined style={{
-              fontSize: 12,
-              color: isOverdue ? "#ff4d4f" : deadlineLabel ? "#8c8c8c" : "#d9d9d9",
-            }} />
+            <CalendarOutlined
+              style={{
+                fontSize: 12,
+                color: isOverdue
+                  ? "#ff4d4f"
+                  : deadlineLabel
+                    ? "#8c8c8c"
+                    : "#d9d9d9",
+              }}
+            />
+
             <Text
               type={isOverdue ? "danger" : "secondary"}
-              style={{ fontStyle: !deadlineLabel ? "italic" : "normal", fontSize: 12 }}
+              style={{
+                fontStyle: !deadlineLabel ? "italic" : "normal",
+                fontSize: 12,
+              }}
             >
               {deadlineLabel || "Дедлайн не указан"}
             </Text>
@@ -159,9 +168,11 @@ const GoalCard = ({ goal, onClick, onPin, showProject = false }) => {
 
         {/* кол-во задач */}
         <Space size={4} style={{ fontSize: 12 }}>
-          <CheckSquareOutlined style={{
-            color: (goal.tasksCount ?? 0) > 0 ? "#52c41a" : "#d9d9d9"
-          }} />
+          <CheckSquareOutlined
+            style={{
+              color: (goal.tasksCount ?? 0) > 0 ? "#52c41a" : "#d9d9d9",
+            }}
+          />
           <Text type="secondary">{goal.tasksCount ?? 0} задач</Text>
         </Space>
 

@@ -11,7 +11,7 @@ const ProjectsPage = () => {
     const {
         projects, meta, loading,
         setMode, setSearch, setSort,
-        setIsArchived, setPage,
+        setIsArchived, setPage, refetch,
     } = useProjects();
 
     const [open, setOpen] = useState(false);
@@ -196,6 +196,7 @@ const ProjectsPage = () => {
                 onSuccess={() => {
                     setPage(1);
                     setSort("createdAt_desc");
+                    refetch();
                 }}
             />
         </div>

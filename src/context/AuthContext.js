@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
     loginRequest,
     registerRequest,
@@ -11,47 +11,52 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [initialized, setInitialized] = useState(false);
 
-    // проверяем при входе
+    // Единая функция загрузки/обновления пользователя
+    const loadUser = useCallback(async () => {
+        const userData = await getMeRequest();
+        setUser(userData);
+        return userData;
+    }, []);
+
+    // Инициализация при старте — проверяем токен
     useEffect(() => {
         const init = async () => {
             try {
                 const token = localStorage.getItem("token");
-
-                if (token) {
-                    const userData = await getMeRequest();
-                    setUser(userData);
-                }
-            } catch (e) {
+                if (token) await loadUser();
+            } catch {
                 localStorage.removeItem("token");
                 setUser(null);
             } finally {
                 setInitialized(true);
             }
         };
-
         init();
-    }, []);
+    }, [loadUser]);
 
-    // лог
     const login = async (formData) => {
         const data = await loginRequest(formData);
-
         localStorage.setItem("token", data.token);
-
-        const userData = await getMeRequest();
-        setUser(userData);
+        await loadUser();
     };
 
-    // рег
     const register = async (formData) => {
         return await registerRequest(formData);
     };
 
-    // вых
     const logout = () => {
         localStorage.removeItem("token");
         setUser(null);
     };
+
+    // Обновить данные пользователя (вызывается после изменения профиля)
+    const refreshUser = useCallback(async () => {
+        try {
+            await loadUser();
+        } catch {
+            // если токен протух — interceptor сам редиректит
+        }
+    }, [loadUser]);
 
     return (
         <AuthContext.Provider
@@ -60,6 +65,7 @@ export const AuthProvider = ({ children }) => {
                 login,
                 register,
                 logout,
+                refreshUser,
                 initialized,
             }}
         >
@@ -68,5 +74,4 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
-// простой кастом хук
 export const useAuth = () => useContext(AuthContext);

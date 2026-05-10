@@ -22,6 +22,11 @@ import ProjectDetailsPage from "./modules/projects/ProjectDetailsPage";
 import GoalsPage from "./modules/goals/GoalsPage";
 import TasksPage from "./modules/tasks/TasksPage";
 import TasksAllPage from "./modules/tasks/TasksAllPage";
+import TaskDetailPage from "./modules/tasks/components/TaskDetailPage";
+// ------------
+import UsersPage from "./modules/users/UsersPage";
+import UserProfilePage from "./modules/users/UserProfilePage";
+import ProfilePage from "./modules/profile/ProfilePage";
 
 function AppInner() {
   const { setLoading } = useLoader();
@@ -51,6 +56,10 @@ function AppInner() {
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/projects/:id/tasks/all" element={<TasksAllPage />} />
+            <Route path="/projects/:id/tasks/:taskId" element={<TaskDetailPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/users/:userId" element={<UserProfilePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
           {/* PUBLIC */}

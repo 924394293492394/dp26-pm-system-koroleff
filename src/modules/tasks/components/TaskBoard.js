@@ -49,7 +49,13 @@ const TaskBoard = ({ tasks, onTaskClick }) => {
 
             {/* Карточки (макс. 10) */}
             {visible.map(task => (
-              <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                isBoard
+                projectId={projectId}
+                onClick={() => onTaskClick(task)}
+              />
             ))}
 
             {/* Кнопка "ещё N карточек" */}

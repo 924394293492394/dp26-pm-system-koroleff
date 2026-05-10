@@ -4,7 +4,7 @@ import {
   Alert, Tooltip,
 } from "antd";
 import {
-  SaveOutlined, DeleteOutlined, LockOutlined,
+  SaveOutlined, DeleteOutlined, LockOutlined, ArrowsAltOutlined
 } from "@ant-design/icons";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
@@ -13,6 +13,7 @@ import { getMembers } from "../../projects/api";
 import { getGoals } from "../../goals/api";
 import TaskStatusTag, { TASK_STATUS_CONFIG } from "./TaskStatusTag";
 import TaskPriorityBadge, { PRIORITY_CONFIG } from "./TaskPriorityBadge";
+import { useNavigate } from "react-router-dom";
 
 const { Text, Title } = Typography;
 
@@ -45,6 +46,7 @@ const TaskDetailsDrawer = ({
   onUpdate, onDelete,
   extraActions = null,
 }) => {
+  const navigate = useNavigate();
   const [formInst] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [members, setMembers] = useState([]);
@@ -221,18 +223,36 @@ const TaskDetailsDrawer = ({
           {task.title}
         </Title>
 
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12 }}>
-          <Text type="secondary">
-            Создал: <Text strong>{task.creator?.login || "—"}</Text>
-          </Text>
-          <Text type="secondary">
-            {new Date(task.createdAt).toLocaleDateString("ru-RU")}
-          </Text>
-          {task._count?.comments > 0 && (
+        {/* Мета-строка шапки: создатель + дата + комментарии + кнопка страницы */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12 }}>
             <Text type="secondary">
-              💬 <Text strong>{task._count.comments}</Text> комм.
+              Создал: <Text strong>{task.creator?.login || "—"}</Text>
             </Text>
-          )}
+            <Text type="secondary">
+              {new Date(task.createdAt).toLocaleDateString("ru-RU")}
+            </Text>
+            {task._count?.comments > 0 && (
+              <Text type="secondary">
+                💬 <Text strong>{task._count.comments}</Text> комм.
+              </Text>
+            )}
+          </div>
+
+          {/* Кнопка перехода на полную страницу задачи */}
+          <Tooltip title="Открыть полную страницу задачи">
+            <Button
+              size="small"
+              icon={<ArrowsAltOutlined />}
+              onClick={() => {
+                onClose();
+                navigate(`/projects/${projectId}/tasks/${task.id}`);
+              }}
+              style={{ fontSize: 12, color: "#1677ff", borderColor: "#91caff" }}
+            >
+              Открыть страницу
+            </Button>
+          </Tooltip>
         </div>
 
         {extraActions && <div style={{ marginTop: 12 }}>{extraActions}</div>}
@@ -269,7 +289,6 @@ const TaskDetailsDrawer = ({
         )}
       </div>
 
-      {/* ── Форма — БЕЗ глобального disabled, каждое поле управляется явно ── */}
       <div style={{ padding: "16px 24px" }}>
         <Form form={formInst} layout="vertical">
 
@@ -325,7 +344,6 @@ const TaskDetailsDrawer = ({
                     : undefined
                 }
               >
-                {/* disabled управляется ОТДЕЛЬНО от остальных полей */}
                 <Select
                   placeholder="Назначить..."
                   allowClear

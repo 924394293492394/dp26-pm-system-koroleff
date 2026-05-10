@@ -11,16 +11,23 @@ const MainLayout = () => {
 
       <Navbar />
 
-      <Layout style={{ flex: 1, overflow: "hidden", flexDirection: "row" }}>
+      <Layout style={{
+        flex: 1,
+        overflow: "hidden",
+        flexDirection: "row",
+        background: "#001529",
+      }}>
 
         <Sidebar />
-
+        
         <Content style={{
           overflow: "auto",
           padding: "28px 32px",
           background: "#f4f6f9",
           flex: 1,
           minWidth: 0,
+          borderTopLeftRadius: 16,
+          marginTop: 10,
         }}>
           <Outlet />
         </Content>

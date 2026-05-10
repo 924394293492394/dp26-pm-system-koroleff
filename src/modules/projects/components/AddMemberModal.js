@@ -37,13 +37,12 @@ const AddMemberModal = ({ open, onClose, onAdd, saving, currentUserRole }) => {
                 setSearching(true);
                 const data = await searchUsers({ search: value, limit: 10 });
                 setUserOptions(
-                    (data?.users || []).map((u) => ({
+                    (data || []).map((u) => ({
                         value: u.id,
                         label: u.login,
                         email: u.email,
-                        firstName: u.firstName,
-                        lastName: u.lastName,
-                        position: u.position,
+                        firstName: u.profile?.firstName,
+                        lastName:  u.profile?.lastName,
                     }))
                 );
             } catch {

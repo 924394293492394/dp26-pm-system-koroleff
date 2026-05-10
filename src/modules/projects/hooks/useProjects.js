@@ -7,6 +7,7 @@ export const useProjects = () => {
   const [sort, setSort] = useState("createdAt_desc");
   const [isArchived, setIsArchived] = useState(false);
   const [page, setPage] = useState(1);
+  const [refresh, setRefresh] = useState(0);
 
   const [projects, setProjects] = useState([]);
   const [meta, setMeta] = useState({ total: 0, currentPage: 1, perPage: 10 });
@@ -32,12 +33,13 @@ export const useProjects = () => {
       cancelled = true;
       clearTimeout(delay);
     };
-  }, [mode, search, sort, isArchived, page]); // каждое изменение = новый запрос
+  }, [mode, search, sort, isArchived, page, refresh]);
 
   return {
     projects, meta, loading,
     setMode, setSearch, setSort,
     setIsArchived,
     setPage,
+    refetch: () => setRefresh(r => r + 1),
   };
 };

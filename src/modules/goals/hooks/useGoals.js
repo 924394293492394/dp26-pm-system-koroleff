@@ -36,7 +36,7 @@ export const useGoals = (projectId) => {
     }
   }, [projectId]);
 
-  // Единая точка обновления при смене режима или projectId
+  // единая точка обновления при смене режима или projectId
   const refetch = useCallback((params = {}) => {
     filtersRef.current = { page: 1, limit: 20 };
     if (viewMode === "my") {

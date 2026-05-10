@@ -88,8 +88,7 @@ const TasksTab = ({ projectId, currentUserRole, currentUserId, onTaskCountChange
           </Button>
         )}
       </div>
-
-      {/* Контент */}
+      
       {loading ? (
         <div style={{ textAlign: "center", padding: 60 }}><Spin size="large" /></div>
       ) : tasks.length === 0 ? (
@@ -109,7 +108,12 @@ const TasksTab = ({ projectId, currentUserRole, currentUserId, onTaskCountChange
       ) : (
         <div>
           {tasks.map(t => (
-            <TaskCard key={t.id} task={t} onClick={() => handleTaskClick(t)} />
+            <TaskCard
+              key={t.id}
+              task={t}
+              projectId={projectId}
+              onClick={() => handleTaskClick(t)}
+            />
           ))}
         </div>
       )}

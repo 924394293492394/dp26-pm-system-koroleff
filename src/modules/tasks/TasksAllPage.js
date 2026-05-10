@@ -8,7 +8,6 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { getTasks } from "./api";
 import { getProjectById } from "../projects/api";
 import TaskCard from "./components/TaskCard";
-import TaskDetailsDrawer from "./components/TaskDetailsDrawer";
 import { TASK_STATUS_CONFIG } from "./components/TaskStatusTag";
 import { PRIORITY_CONFIG } from "./components/TaskPriorityBadge";
 import { useAuth } from "../../context/AuthContext";
@@ -25,21 +24,16 @@ const TasksAllPage = () => {
   const [tasks, setTasks] = useState([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, limit: 24, totalPages: 1 });
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Параметры фильтрации из URL
   const [status, setStatus] = useState(searchParams.get("status") || undefined);
   const [priority, setPriority] = useState(undefined);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  // Загрузить проект (для роли)
   useEffect(() => {
     getProjectById(projectId).then(setProject).catch(() => { });
   }, [projectId]);
 
-  // Загрузить задачи
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -62,30 +56,17 @@ const TasksAllPage = () => {
   };
 
   const handleTaskClick = (task) => {
-    setSelected(task);
-    setDrawerOpen(true);
-  };
-
-  const handleUpdate = (updated) => {
-    setTasks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
-    setSelected(p => ({ ...p, ...updated }));
-  };
-
-  const handleDelete = (taskId) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    setDrawerOpen(false);
+    navigate(`/projects/${projectId}/tasks/${task.id}`);
   };
 
   return (
     <div style={{ maxWidth: 1200 }}>
-      {/* Хлебные крошки */}
       <Breadcrumb style={{ marginBottom: 16 }} items={[
         { title: <span style={{ cursor: "pointer" }} onClick={() => navigate("/projects")}>Проекты</span> },
         { title: <span style={{ cursor: "pointer" }} onClick={() => navigate(`/projects/${projectId}?tab=tasks`)}>{project?.name || "Проект"}</span> },
         { title: "Все задачи" },
       ]} />
 
-      {/* Шапка */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/projects/${projectId}?tab=tasks`)} />
         <div>
@@ -101,7 +82,6 @@ const TasksAllPage = () => {
         </div>
       </div>
 
-      {/* Фильтры */}
       <div style={{
         display: "flex", gap: 10, flexWrap: "wrap",
         marginBottom: 20, padding: "12px 16px",
@@ -136,14 +116,12 @@ const TasksAllPage = () => {
         </Text>
       </div>
 
-      {/* Контент */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 60 }}><Spin size="large" /></div>
       ) : tasks.length === 0 ? (
         <Empty description="Задач не найдено" style={{ padding: "60px 0" }} />
       ) : (
         <>
-          {/* ── GRID: несколько карточек в ряд ── */}
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
@@ -159,7 +137,6 @@ const TasksAllPage = () => {
             ))}
           </div>
 
-          {/* Пагинация */}
           {meta.totalPages > 1 && (
             <div style={{ textAlign: "center", marginTop: 28 }}>
               <Pagination
@@ -175,17 +152,6 @@ const TasksAllPage = () => {
         </>
       )}
 
-      {/* Drawer деталей */}
-      <TaskDetailsDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        task={selected}
-        projectId={projectId}
-        currentUserId={user?.id || user?.userId}
-        currentUserRole={project?.role}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
-      />
     </div>
   );
 };

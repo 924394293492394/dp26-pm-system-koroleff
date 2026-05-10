@@ -1,11 +1,9 @@
 import { Layout, Menu, Tooltip } from "antd";
 import {
   DashboardOutlined, ProjectOutlined, TeamOutlined,
-  SettingOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-  CheckSquareOutlined, AimOutlined,
+  SettingOutlined, CheckSquareOutlined, AimOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 
 const { Sider } = Layout;
@@ -19,80 +17,101 @@ const getSelectedKey = (pathname) => {
   return "/";
 };
 
+const SIDEBAR_BG = "#0d1f35";
+const SIDEBAR_HOVER = "rgba(255,255,255,0.06)";
+const SIDEBAR_ITEM_ACTIVE = "rgba(22, 119, 255, 0.15)";
+
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
 
   const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+  const selectedKey = getSelectedKey(location.pathname);
 
-  const items = [
-    { key: "/", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/projects", icon: <ProjectOutlined />, label: "Проекты" },
-    { key: "/goals", icon: <AimOutlined />, label: "Цели" },
-    { key: "/tasks", icon: <CheckSquareOutlined />, label: "Задачи" },
-    { key: "/users", icon: <TeamOutlined />, label: "Пользователи" },
-    ...(isAdmin ? [{ key: "/admin", icon: <SettingOutlined />, label: "Admin" }] : []),
+  const menuItems = [
+    {
+      key: "/",
+      icon: <DashboardOutlined />,
+      label: "Dashboard",
+    },
+    {
+      key: "/projects",
+      icon: <ProjectOutlined />,
+      label: "Проекты",
+    },
+    {
+      key: "/goals",
+      icon: <AimOutlined />,
+      label: "Цели",
+    },
+    {
+      key: "/tasks",
+      icon: <CheckSquareOutlined />,
+      label: "Задачи",
+    },
+    {
+      key: "/users",
+      icon: <TeamOutlined />,
+      label: "Пользователи",
+    },
+    ...(isAdmin ? [{
+      key: "/admin",
+      icon: <SettingOutlined />,
+      label: "Администрирование",
+    }] : []),
   ];
 
   return (
-    <Sider
-      collapsible
-      collapsed={collapsed}
-      trigger={null}
-      width={220}
-      collapsedWidth={64}
-      style={{ background: "#001529", flexShrink: 0 }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-
-        <div style={{ flex: 1, overflow: "hidden auto" }}>
-          <Menu
-            theme="dark"
-            mode="inline"
-            selectedKeys={[getSelectedKey(location.pathname)]}
-            items={items}
-            onClick={({ key }) => navigate(key)}
-            style={{
-              background: "transparent",
-              border: "none",
-              paddingTop: 8,
-              paddingBottom: 8,
-            }}
-          />
-        </div>
-
-        <Tooltip title={collapsed ? "Развернуть" : "Свернуть"} placement="right">
-          <div
-            onClick={() => setCollapsed(!collapsed)}
-            style={{
-              height: 48,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flexShrink: 0,
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-              color: "rgba(255,255,255,0.40)",
-              fontSize: 16,
-              transition: "color 0.2s, background 0.2s",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = "rgba(255,255,255,0.85)";
-              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = "rgba(255,255,255,0.40)";
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          </div>
-        </Tooltip>
-
-      </div>
-    </Sider>
+    <div style={{
+      paddingTop: 10,
+      paddingBottom: 10,
+      paddingLeft: 10,
+      background: "#001529",
+      flexShrink: 0,
+    }}>
+      <Sider
+        width={200}
+        style={{
+          background: SIDEBAR_BG,
+          borderRadius: 12,
+          overflow: "hidden",
+          height: "100%",
+          boxShadow: "0 2px 16px rgba(0,0,0,0.25)",
+        }}
+      >
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          onClick={({ key }) => navigate(key)}
+          style={{
+            background: "transparent",
+            border: "none",
+            paddingTop: 10,
+            paddingBottom: 10,
+            height: "100%",
+          }}
+          items={menuItems.map(item => ({
+            key: item.key,
+            label: item.label,
+            icon: (
+              <Tooltip
+                title={item.label}
+                placement="right"
+                mouseEnterDelay={0.8}
+              >
+                {item.icon}
+              </Tooltip>
+            ),
+            style: {
+              borderRadius: 8,
+              marginBottom: 2,
+            },
+          }))}
+        />
+      </Sider>
+    </div>
   );
 };
 
