@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 //-------------------01/03/2026------------------------
@@ -17,52 +17,57 @@ enum UserRole {
 }
 
 model UserAuth {
-  id        String     @id @default(uuid())
-  login     String     @unique
-  email     String     @unique
-  password  String
-  role      UserRole   @default(USER)
-  createdAt DateTime   @default(now())
+  id          String    @id @default(uuid())
+  login       String    @unique
+  email       String    @unique
+  password    String
+  role        UserRole  @default(USER)
+  createdAt    DateTime  @default(now())
+  lastActiveAt DateTime?
   //50n50 добавить boolean забл или нет
   pinnedGoals GoalPin[]
 
-  profile        UserProfile?
-  createdProjects Project[]    @relation("ProjectCreator")
-  createdTasks    Task[]       @relation("TaskCreator")
-  assignedTasks   Task[]       @relation("AssignedTasks")
-  createdGoals    Goal[]       @relation("GoalCreator")
-  responsibleGoals Goal[]      @relation("GoalResponsible")
-  comments        Comment[]
-  memberships     ProjectMember[]
+  profile             UserProfile?
+  createdProjects     Project[]        @relation("ProjectCreator")
+  createdTasks        Task[]           @relation("TaskCreator")
+  assignedTasks       Task[]           @relation("AssignedTasks")
+  createdGoals        Goal[]           @relation("GoalCreator")
+  responsibleGoals    Goal[]           @relation("GoalResponsible")
+  comments            Comment[]
+  memberships         ProjectMember[]
+  uploadedAttachments TaskAttachment[] @relation("UploadedAttachments")
+  checklistItems      TaskChecklist[]  @relation("ChecklistCreator")
+  taskLinks           TaskLink[]       @relation("LinkCreator")
+  taskActivities      TaskActivity[]   @relation("ActivityUser")
 }
 
 model UserProfile {
-  id         String   @id @default(uuid())
-  userId     String   @unique
-  firstName  String
-  lastName   String
-  position   String?
-  avatarUrl  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  firstName String
+  lastName  String
+  position  String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user       UserAuth @relation(fields: [userId], references: [id])
+  user UserAuth @relation(fields: [userId], references: [id])
 }
 
 model Project {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
   description String?
   createdBy   String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  isArchived  Boolean   @default(false)
-  isDeleted   Boolean   @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isArchived  Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
 
-  creator     UserAuth  @relation("ProjectCreator", fields: [createdBy], references: [id])
-  members     ProjectMember[]
-  goals       Goal[]
-  tasks       Task[]
+  creator UserAuth        @relation("ProjectCreator", fields: [createdBy], references: [id])
+  members ProjectMember[]
+  goals   Goal[]
+  tasks   Task[]
 
   @@index([createdBy])
 }
@@ -76,13 +81,13 @@ enum ProjectRole {
 
 model ProjectMember {
   id        String      @id @default(uuid())
-  projectId String      
-  userId    String      
+  projectId String
+  userId    String
   role      ProjectRole @default(MEMBER)
   joinedAt  DateTime    @default(now())
 
-  project   Project     @relation(fields: [projectId], references: [id])
-  user      UserAuth    @relation(fields: [userId], references: [id])
+  project Project  @relation(fields: [projectId], references: [id])
+  user    UserAuth @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])
   @@index([userId])
@@ -96,23 +101,23 @@ enum GoalStatus {
 }
 
 model Goal {
-  id                 String     @id @default(uuid())
-  projectId          String
-  createdBy          String
-  responsibleUserId  String?
-  title              String
-  description        String?
-  dueDate            DateTime?
-  status             GoalStatus @default(PLANNED)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  isDeleted          Boolean    @default(false)
+  id                String     @id @default(uuid())
+  projectId         String
+  createdBy         String
+  responsibleUserId String?
+  title             String
+  description       String?
+  dueDate           DateTime?
+  status            GoalStatus @default(PLANNED)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  isDeleted         Boolean    @default(false)
 
-  project        Project   @relation(fields: [projectId], references: [id])
-  creator        UserAuth  @relation("GoalCreator", fields: [createdBy], references: [id])
-  responsible    UserAuth? @relation("GoalResponsible", fields: [responsibleUserId], references: [id])
-  tasks          Task[]
-  pins GoalPin[]
+  project     Project   @relation(fields: [projectId], references: [id])
+  creator     UserAuth  @relation("GoalCreator", fields: [createdBy], references: [id])
+  responsible UserAuth? @relation("GoalResponsible", fields: [responsibleUserId], references: [id])
+  tasks       Task[]
+  pins        GoalPin[]
 
   @@index([projectId])
   @@index([createdBy])
@@ -159,16 +164,94 @@ model Task {
   updatedAt   DateTime     @updatedAt
   isDeleted   Boolean      @default(false)
 
-  project   Project   @relation(fields: [projectId], references: [id])
-  goal      Goal?     @relation(fields: [goalId], references: [id])
-  creator   UserAuth  @relation("TaskCreator", fields: [createdBy], references: [id])
-  assignee  UserAuth? @relation("AssignedTasks", fields: [assignedTo], references: [id])
-  comments  Comment[]
+  project     Project          @relation(fields: [projectId], references: [id])
+  goal        Goal?            @relation(fields: [goalId], references: [id])
+  creator     UserAuth         @relation("TaskCreator", fields: [createdBy], references: [id])
+  assignee    UserAuth?        @relation("AssignedTasks", fields: [assignedTo], references: [id])
+  comments    Comment[]
+  attachments TaskAttachment[] @relation("TaskAttachments")
+  checklists  TaskChecklist[]  @relation("TaskChecklists")
+  links       TaskLink[]       @relation("TaskLinks")
+  activities  TaskActivity[]   @relation("TaskActivities")
 
   @@index([projectId])
   @@index([goalId])
   @@index([createdBy])
   @@index([assignedTo])
+}
+
+enum TaskLinkType {
+  GIT_BRANCH
+  PULL_REQUEST
+  EXTERNAL_URL
+  FIGMA
+  NOTION
+  JIRA
+}
+
+model TaskAttachment {
+  id         String   @id @default(uuid())
+  taskId     String
+  uploadedBy String
+  fileName   String
+  fileSize   Int
+  mimeType   String
+  url        String
+  createdAt  DateTime @default(now())
+
+  task     Task     @relation("TaskAttachments", fields: [taskId], references: [id])
+  uploader UserAuth @relation("UploadedAttachments", fields: [uploadedBy], references: [id])
+
+  @@index([taskId])
+  @@index([uploadedBy])
+}
+
+model TaskChecklist {
+  id        String   @id @default(uuid())
+  taskId    String
+  text      String
+  isDone    Boolean  @default(false)
+  order     Int      @default(0)
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task    Task     @relation("TaskChecklists", fields: [taskId], references: [id])
+  creator UserAuth @relation("ChecklistCreator", fields: [createdBy], references: [id])
+
+  @@index([taskId])
+}
+
+model TaskLink {
+  id        String       @id @default(uuid())
+  taskId    String
+  type      TaskLinkType @default(EXTERNAL_URL)
+  url       String
+  label     String?
+  createdBy String
+  createdAt DateTime     @default(now())
+  isDeleted Boolean      @default(false)
+
+  task    Task     @relation("TaskLinks", fields: [taskId], references: [id])
+  creator UserAuth @relation("LinkCreator", fields: [createdBy], references: [id])
+
+  @@index([taskId])
+}
+
+model TaskActivity {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  action    String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  task Task     @relation("TaskActivities", fields: [taskId], references: [id])
+  user UserAuth @relation("ActivityUser", fields: [userId], references: [id])
+
+  @@index([taskId])
 }
 
 model Comment {
@@ -180,8 +263,8 @@ model Comment {
   updatedAt DateTime @updatedAt
   isDeleted Boolean  @default(false)
 
-  task  Task     @relation(fields: [taskId], references: [id])
-  user  UserAuth @relation(fields: [userId], references: [id])
+  task Task     @relation(fields: [taskId], references: [id])
+  user UserAuth @relation(fields: [userId], references: [id])
 
   @@index([taskId])
   @@index([userId])

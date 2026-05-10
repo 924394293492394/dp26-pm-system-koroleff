@@ -13,6 +13,9 @@ CREATE TYPE "TaskStatus" AS ENUM ('TODO', 'IN_PROGRESS', 'REVIEW', 'DONE');
 -- CreateEnum
 CREATE TYPE "TaskPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
 
+-- CreateEnum
+CREATE TYPE "TaskLinkType" AS ENUM ('GIT_BRANCH', 'PULL_REQUEST', 'EXTERNAL_URL', 'FIGMA', 'NOTION', 'JIRA');
+
 -- CreateTable
 CREATE TABLE "UserAuth" (
     "id" TEXT NOT NULL,
@@ -21,6 +24,7 @@ CREATE TABLE "UserAuth" (
     "password" TEXT NOT NULL,
     "role" "UserRole" NOT NULL DEFAULT 'USER',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastActiveAt" TIMESTAMP(3),
 
     CONSTRAINT "UserAuth_pkey" PRIMARY KEY ("id")
 );
@@ -110,6 +114,62 @@ CREATE TABLE "Task" (
 );
 
 -- CreateTable
+CREATE TABLE "TaskAttachment" (
+    "id" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+    "uploadedBy" TEXT NOT NULL,
+    "fileName" TEXT NOT NULL,
+    "fileSize" INTEGER NOT NULL,
+    "mimeType" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TaskAttachment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TaskChecklist" (
+    "id" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "isDone" BOOLEAN NOT NULL DEFAULT false,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "TaskChecklist_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TaskLink" (
+    "id" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+    "type" "TaskLinkType" NOT NULL DEFAULT 'EXTERNAL_URL',
+    "url" TEXT NOT NULL,
+    "label" TEXT,
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "TaskLink_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TaskActivity" (
+    "id" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "field" TEXT,
+    "oldValue" TEXT,
+    "newValue" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "TaskActivity_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Comment" (
     "id" TEXT NOT NULL,
     "taskId" TEXT NOT NULL,
@@ -174,6 +234,21 @@ CREATE INDEX "Task_createdBy_idx" ON "Task"("createdBy");
 CREATE INDEX "Task_assignedTo_idx" ON "Task"("assignedTo");
 
 -- CreateIndex
+CREATE INDEX "TaskAttachment_taskId_idx" ON "TaskAttachment"("taskId");
+
+-- CreateIndex
+CREATE INDEX "TaskAttachment_uploadedBy_idx" ON "TaskAttachment"("uploadedBy");
+
+-- CreateIndex
+CREATE INDEX "TaskChecklist_taskId_idx" ON "TaskChecklist"("taskId");
+
+-- CreateIndex
+CREATE INDEX "TaskLink_taskId_idx" ON "TaskLink"("taskId");
+
+-- CreateIndex
+CREATE INDEX "TaskActivity_taskId_idx" ON "TaskActivity"("taskId");
+
+-- CreateIndex
 CREATE INDEX "Comment_taskId_idx" ON "Comment"("taskId");
 
 -- CreateIndex
@@ -217,6 +292,30 @@ ALTER TABLE "Task" ADD CONSTRAINT "Task_createdBy_fkey" FOREIGN KEY ("createdBy"
 
 -- AddForeignKey
 ALTER TABLE "Task" ADD CONSTRAINT "Task_assignedTo_fkey" FOREIGN KEY ("assignedTo") REFERENCES "UserAuth"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskAttachment" ADD CONSTRAINT "TaskAttachment_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskAttachment" ADD CONSTRAINT "TaskAttachment_uploadedBy_fkey" FOREIGN KEY ("uploadedBy") REFERENCES "UserAuth"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskChecklist" ADD CONSTRAINT "TaskChecklist_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskChecklist" ADD CONSTRAINT "TaskChecklist_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "UserAuth"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskLink" ADD CONSTRAINT "TaskLink_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskLink" ADD CONSTRAINT "TaskLink_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "UserAuth"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskActivity" ADD CONSTRAINT "TaskActivity_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TaskActivity" ADD CONSTRAINT "TaskActivity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "UserAuth"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Comment" ADD CONSTRAINT "Comment_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

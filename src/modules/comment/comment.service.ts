@@ -135,7 +135,8 @@ class CommentService {
                         select: {
                             id: true,
                             login: true,
-                            email: true
+                            email: true,
+                            profile: { select: { avatarUrl: true } }
                         }
                     }
                 },
@@ -179,7 +180,8 @@ class CommentService {
                     select: {
                         id: true,
                         login: true,
-                        email: true
+                        email: true,
+                        profile: { select: { avatarUrl: true } }
                     }
                 }
             }

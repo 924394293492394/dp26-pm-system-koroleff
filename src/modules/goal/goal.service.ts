@@ -45,10 +45,10 @@ class GoalService {
       updatedAt: goal.updatedAt,
       isPinned: userId ? (goal.pins?.some((p: any) => p.userId === userId) ?? false) : false,
       creator: goal.creator
-        ? { id: goal.creator.id, login: goal.creator.login, email: goal.creator.email }
+        ? { id: goal.creator.id, login: goal.creator.login, email: goal.creator.email, profile: goal.creator.profile ?? null }
         : null,
       responsible: goal.responsible
-        ? { id: goal.responsible.id, login: goal.responsible.login, email: goal.responsible.email }
+        ? { id: goal.responsible.id, login: goal.responsible.login, email: goal.responsible.email, profile: goal.responsible.profile ?? null }
         : null,
       tasksCount: goal._count?.tasks ?? 0
     }
@@ -56,8 +56,8 @@ class GoalService {
 
   private static goalInclude(userId: string) {
     return {
-      creator: { select: { id: true, login: true, email: true } },
-      responsible: { select: { id: true, login: true, email: true } },
+      creator:     { select: { id: true, login: true, email: true, profile: { select: { avatarUrl: true } } } },
+      responsible: { select: { id: true, login: true, email: true, profile: { select: { avatarUrl: true } } } },
       _count: { select: { tasks: true } },
       pins: { where: { userId }, select: { userId: true } }
     }

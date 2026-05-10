@@ -8,8 +8,26 @@ import {
   userSearchQuerySchema
 } from './profile.schema.js'
 import { successResponse } from '../../common/utils/response.js'
+import { AppError } from '../../middleware/error.middleware.js'
 
 export class ProfileController {
+
+  static async deleteAvatar(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await ProfileService.deleteAvatar(req.user!.userId)
+      res.json(successResponse(result))
+    } catch (e) { next(e) }
+  }
+
+  static async uploadAvatar(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) {
+        throw new AppError('NO_FILE', 'Файл не передан', 400)
+      }
+      const result = await ProfileService.uploadAvatar(req.user!.userId, req.file)
+      res.json(successResponse(result))
+    } catch (e) { next(e) }
+  }
 
   static async getMy(req: AuthRequest, res: Response, next: NextFunction) {
     try {

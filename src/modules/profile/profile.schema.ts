@@ -14,14 +14,15 @@ export const userParamsSchema = z.object({
 export const userQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(50).default(20),
-  search: z.string().optional()
+  search: z.string().optional(),
+  role: z.enum(['USER', 'ADMIN', 'SUPER_ADMIN']).optional(),
 })
 
 export const userSearchQuerySchema = z.object({
   search: z.string().min(2, 'Минимум 2 символа'),
   limit: z.coerce.number().min(1).max(20).default(10)
-});
+})
 
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
-export type UserQuery = z.infer<typeof userQuerySchema>;
-export type UserSearchQuery = z.infer<typeof userSearchQuerySchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
+export type UserQuery = z.infer<typeof userQuerySchema>
+export type UserSearchQuery = z.infer<typeof userSearchQuerySchema>

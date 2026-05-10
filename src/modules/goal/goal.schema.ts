@@ -21,14 +21,14 @@ export const goalQuerySchema = z.object({
 export const createGoalSchema = z.object({
   title: z.string().min(3).max(255),
   description: z.string().optional(),
-  dueDate: z.string().datetime().optional(),
+  dueDate: z.string().datetime().nullable().optional(),
   responsibleUserId: z.string().uuid().optional()
 })
 
 export const updateGoalSchema = z.object({
   title: z.string().min(3).max(255).optional(),
   description: z.string().optional(),
-  dueDate: z.string().datetime().optional(),
+  dueDate: z.string().datetime().nullable().optional(), //nullable - позволяет сделать пустое поле
   status: z.nativeEnum(GoalStatus).optional(),
   responsibleUserId: z.string().uuid().nullable().optional()
 })

@@ -144,7 +144,8 @@ class ProjectMemberService {
             select: {
               id: true,
               login: true,
-              email: true
+              email: true,
+              profile: { select: { firstName: true, lastName: true, avatarUrl: true } }
             }
           }
         },
@@ -176,7 +177,8 @@ class ProjectMemberService {
           select: {
             id: true,
             login: true,
-            email: true
+            email: true,
+            profile: { select: { firstName: true, lastName: true, avatarUrl: true } }
           }
         }
       }

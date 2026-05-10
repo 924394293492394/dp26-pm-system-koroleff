@@ -32,7 +32,31 @@ class TaskService {
         createdBy: true, responsibleUserId: true
       }
     },
-    _count: { select: { comments: true } }
+    _count: {
+      select: {
+        comments: { where: { isDeleted: false } },
+        attachments: true,
+        checklists: true,
+        links: { where: { isDeleted: false } },
+      }
+    }
+  }
+
+  private static async recordActivity(
+    taskId: string,
+    userId: string,
+    action: string,
+    field?: string,
+    oldValue?: string,
+    newValue?: string
+  ) {
+    try {
+      await prisma.taskActivity.create({
+        data: { taskId, userId, action, field, oldValue, newValue }
+      })
+    } catch {
+      // Не блокируем основную операцию если лог не записался
+    }
   }
 
   private static async getProjectRole(projectId: string, userId: string, role: string) {
@@ -113,6 +137,9 @@ class TaskService {
     })
 
     await LogService.logAction(userId, 'CREATE_TASK', 'Task', task.id)
+
+    await this.recordActivity(task.id, userId, 'CREATED')
+
     return task
   }
 
@@ -145,7 +172,6 @@ class TaskService {
       meta: { total, totalPages: Math.ceil(total / limit), page, limit }
     }
   }
-
 
   static async getOne(projectId: string, taskId: string, userId: string, role: string) {
     await this.assertProjectAccess(projectId, userId, role)
@@ -188,6 +214,28 @@ class TaskService {
       }
     }
 
+    const changes: Array<{ action: string; field: string; oldValue: string; newValue: string }> = []
+
+    if (data.status && data.status !== task.status) {
+      changes.push({ action: 'STATUS_CHANGED', field: 'status', oldValue: task.status, newValue: data.status })
+    }
+    if (data.priority && data.priority !== task.priority) {
+      changes.push({ action: 'PRIORITY_CHANGED', field: 'priority', oldValue: task.priority, newValue: data.priority })
+    }
+    if (data.assignedTo !== undefined && data.assignedTo !== task.assignedTo) {
+      changes.push({
+        action: 'ASSIGNEE_CHANGED', field: 'assignedTo',
+        oldValue: task.assignedTo || '', newValue: data.assignedTo || ''
+      })
+    }
+    if (data.dueDate !== undefined) {
+      const oldDate = task.dueDate ? task.dueDate.toISOString() : ''
+      const newDate = data.dueDate || ''
+      if (oldDate !== newDate) {
+        changes.push({ action: 'DUEDATE_CHANGED', field: 'dueDate', oldValue: oldDate, newValue: newDate })
+      }
+    }
+
     const updated = await prisma.task.update({
       where: { id: taskId },
       data: {
@@ -205,6 +253,11 @@ class TaskService {
     })
 
     await LogService.logAction(userId, 'UPDATE_TASK', 'Task', taskId)
+
+    await Promise.all(
+      changes.map(c => this.recordActivity(taskId, userId, c.action, c.field, c.oldValue, c.newValue))
+    )
+
     return updated
   }
 

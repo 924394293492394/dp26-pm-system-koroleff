@@ -23,7 +23,3 @@ globalGoalRouter.use(authMiddleware)
 globalGoalRouter.get('/', GoalController.getAllGlobal)
 
 export { globalGoalRouter }
-
-//          cm-07/03/2026 Korolev E.V.
-//  реализован модуль на 9/10! (все предусмотрено).
-//  Возможно, надо будет сделать универсальные патч на изменение любого поля в целях
