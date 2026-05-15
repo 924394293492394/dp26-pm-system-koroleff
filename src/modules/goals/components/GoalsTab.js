@@ -67,7 +67,7 @@ const GoalsTab = ({ projectId, currentUserRole, currentUserId, onGoalCountChange
 
   return (
     <div>
-      {/* ── Toolbar ─────────────────────────────────────── */}
+      {/* Toolbar */}
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -139,7 +139,7 @@ const GoalsTab = ({ projectId, currentUserRole, currentUserId, onGoalCountChange
         </div>
       </div>
 
-      {/* ── Контент ─────────────────────────────────────── */}
+      {/* Контент */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 60 }}>
           <Spin size="large" />
@@ -224,7 +224,7 @@ const GoalsTab = ({ projectId, currentUserRole, currentUserId, onGoalCountChange
         </>
       )}
 
-      {/* ── Модалы ──────────────────────────────────────── */}
+      {/* Модалы */}
       <CreateGoalModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}

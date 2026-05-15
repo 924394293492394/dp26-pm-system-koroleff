@@ -1,4 +1,4 @@
-import { Button, Input, Select, Popconfirm, message, Tooltip, Empty } from "antd";
+import { Button, Input, Select, Popconfirm, message, Empty } from "antd";
 import {
   PlusOutlined, DeleteOutlined, LinkOutlined,
   BranchesOutlined, MergeCellsOutlined,
@@ -15,10 +15,9 @@ const LINK_TYPES = {
   JIRA:         { label: "Jira",         icon: "🔵",                   color: "#0052cc" },
 };
 
-// ── Компонент ссылок задачи ──
 const TaskLinks = ({ projectId, taskId, currentUserRole, onCountChange }) => {
   const [links,    setLinks]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
+  const [,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form,     setForm]     = useState({ url: "", label: "", type: "EXTERNAL_URL" });
   const [saving,   setSaving]   = useState(false);

@@ -125,9 +125,6 @@ const ProjectDetailsPage = () => {
       </Card>
 
       <Divider style={{ margin: "24px 0 0" }} />
-      <Text type="secondary" style={{ fontSize: 12 }}>
-        📌 Задачи и цели проекта появятся здесь в следующих итерациях
-      </Text>
     </div>
   );
 

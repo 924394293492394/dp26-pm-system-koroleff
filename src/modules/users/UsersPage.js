@@ -1,9 +1,9 @@
 import {
   Table, Input, Select, Avatar, Tag, Typography,
-  Space, Tooltip, Badge,
+  Space, Badge,
 } from "antd";
 import {
-  SearchOutlined, UserOutlined, CrownOutlined, TeamOutlined,
+  SearchOutlined, TeamOutlined,
 } from "@ant-design/icons";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +15,6 @@ import { getRoleConfig } from "../../utils/roles";
 const { Text, Title } = Typography;
 
 
-// Онлайн-статус по lastActiveAt
 const getOnlineStatus = (lastActiveAt) => {
   if (!lastActiveAt) return { label: "Не в сети",  color: "#d9d9d9", dot: "default" };
   const diffMin = (Date.now() - new Date(lastActiveAt).getTime()) / 60000;
@@ -81,7 +80,6 @@ const UsersPage = () => {
 
         return (
           <Space size={12}>
-            {/* Аватарка с Badge онлайн-статуса */}
             <Badge dot status={status.dot} offset={[-4, 34]}>
               <Avatar
                 size={40}
@@ -114,7 +112,6 @@ const UsersPage = () => {
       },
     },
 
-    // почта — только для админов
     ...(isAdmin ? [{
       title:  "Email",
       key:    "email",
@@ -170,7 +167,6 @@ const UsersPage = () => {
       },
     },
 
-    // Дата регистрации — только админов
     ...(isAdmin ? [{
       title:  "Регистрация",
       key:    "createdAt",
@@ -221,7 +217,6 @@ const UsersPage = () => {
           onSearch={handleSearch}
           onChange={e => !e.target.value && handleSearch("")}
         />
-        {/* Фильтр по роли — только для админов*/}
         {isAdmin && (
           <Select
             placeholder="Фильтр по роли"
@@ -238,7 +233,6 @@ const UsersPage = () => {
         )}
 
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
-          {/* Легенда онлайн-статусов */}
           <Space size={12}>
             {[
               { color: "#52c41a", label: "В сети (< 10 мин)"  },

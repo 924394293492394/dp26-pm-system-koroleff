@@ -8,22 +8,21 @@ import {
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user,        setUser]        = useState(null);
     const [initialized, setInitialized] = useState(false);
 
-    // Единая функция загрузки/обновления пользователя
     const loadUser = useCallback(async () => {
-        const userData = await getMeRequest();
+        const response = await getMeRequest();
+        const userData = response?.data ?? response;
         setUser(userData);
         return userData;
     }, []);
 
-    // Инициализация при старте — проверяем токен
     useEffect(() => {
         const init = async () => {
             try {
                 const token = localStorage.getItem("token");
-                if (token) await loadUser();
+                if (token && token !== "undefined") await loadUser();
             } catch {
                 localStorage.removeItem("token");
                 setUser(null);
@@ -35,8 +34,9 @@ export const AuthProvider = ({ children }) => {
     }, [loadUser]);
 
     const login = async (formData) => {
-        const data = await loginRequest(formData);
-        localStorage.setItem("token", data.token);
+        const response = await loginRequest(formData);
+        const token = response?.data?.token ?? response?.token;
+        localStorage.setItem("token", token);
         await loadUser();
     };
 
@@ -49,25 +49,17 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
-    // Обновить данные пользователя (вызывается после изменения профиля)
     const refreshUser = useCallback(async () => {
         try {
             await loadUser();
         } catch {
-            // если токен протух — interceptor сам редиректит
+
         }
     }, [loadUser]);
 
     return (
         <AuthContext.Provider
-            value={{
-                user,
-                login,
-                register,
-                logout,
-                refreshUser,
-                initialized,
-            }}
+            value={{ user, login, register, logout, refreshUser, initialized }}
         >
             {children}
         </AuthContext.Provider>

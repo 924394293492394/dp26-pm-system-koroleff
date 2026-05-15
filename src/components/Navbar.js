@@ -117,7 +117,6 @@ const Navbar = ({ notifCount = 0 }) => {
 
       <Space size={6} align="center">
 
-        {/* след фикс*/}
         <Tooltip title="Уведомления" placement="bottom">
           <Badge
             count={notifCount}

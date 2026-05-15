@@ -160,7 +160,6 @@ const GoalDetailsDrawer = ({
             gap: 8,
             alignItems: "center",
           }}>
-            {/* ── Удалить — квадратная иконка-кнопка с тонкой красной границей ── */}
             {perms.canDelete && (
               <Popconfirm
                 title="Удалить цель?"
@@ -188,7 +187,6 @@ const GoalDetailsDrawer = ({
               </Popconfirm>
             )}
 
-            {/* ── Сохранить — занимает всё оставшееся место ── */}
             <Button
               type="primary"
               icon={<SaveOutlined />}
@@ -202,13 +200,13 @@ const GoalDetailsDrawer = ({
         ) : null
       }
     >
-      {/* ── Шапка ─────────────────────────────────────── */}
+      {/* Шапка */}
       <div style={{
         padding: "20px 24px 16px",
         borderBottom: "1px solid #f0f0f0",
         background: "#fafafa",
       }}>
-        {/* Строка: статус + pin + загрузка роли */}
+        {/* Строка: статус +pin + загрузка роли */}
         <div style={{
           display: "flex",
           justifyContent: "space-between",
@@ -265,7 +263,6 @@ const GoalDetailsDrawer = ({
           </Text>
         </div>
 
-        {/* ── Кнопка "К проекту" — отдельная строка под мета ── */}
         {extraActions && (
           <div style={{ marginTop: 12 }}>
             {extraActions}
@@ -273,7 +270,7 @@ const GoalDetailsDrawer = ({
         )}
       </div>
 
-      {/* ── Уведомления о правах ────────────────────────── */}
+      {/* Уведомления о правах участника */}
       <div style={{ padding: "0 24px" }}>
         {perms.isViewer && (
           <Alert
@@ -294,7 +291,7 @@ const GoalDetailsDrawer = ({
         )}
       </div>
 
-      {/* ── Форма ───────────────────────────────────────── */}
+      {/* осн. форма */}
       <div style={{ padding: "16px 24px" }}>
         <Form form={formInst} layout="vertical" disabled={!perms.canEdit}>
           <Row gutter={12}>

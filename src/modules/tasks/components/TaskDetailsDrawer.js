@@ -149,7 +149,6 @@ const TaskDetailsDrawer = ({
     && new Date(task.dueDate) < new Date()
     && task.status !== "DONE";
 
-  // ── Каждое поле получает disabled явно — без глобального Form disabled ──
   const fieldDisabled = !perms.canEdit;
 
   return (
@@ -198,7 +197,7 @@ const TaskDetailsDrawer = ({
         ) : null
       }
     >
-      {/* ── Шапка ── */}
+      {/* Шапка */}
       <div style={{
         padding: "20px 24px 16px",
         borderBottom: "1px solid #f0f0f0",
@@ -239,7 +238,6 @@ const TaskDetailsDrawer = ({
             )}
           </div>
 
-          {/* Кнопка перехода на полную страницу задачи */}
           <Tooltip title="Открыть полную страницу задачи">
             <Button
               size="small"
@@ -258,7 +256,6 @@ const TaskDetailsDrawer = ({
         {extraActions && <div style={{ marginTop: 12 }}>{extraActions}</div>}
       </div>
 
-      {/* ── Уведомления о правах — ТОЛЬКО ОДИН блок, без дублей ── */}
       <div style={{ padding: "0 24px" }}>
         {perms.isViewer && (
           <Alert
@@ -269,7 +266,6 @@ const TaskDetailsDrawer = ({
             style={{ margin: "14px 0 0" }}
           />
         )}
-        {/* isGoalPriv — показываем только если не creator и не privileged чтобы не перегружать */}
         {perms.isGoalPriv && !perms.isPrivileged && !perms.isCreator && (
           <Alert
             type="info"
@@ -278,7 +274,6 @@ const TaskDetailsDrawer = ({
             style={{ margin: "14px 0 0" }}
           />
         )}
-        {/* isOnlyAssignee — один Alert, один раз */}
         {perms.isOnlyAssignee && (
           <Alert
             type="warning"
@@ -408,7 +403,7 @@ const TaskDetailsDrawer = ({
             alignItems: "center",
           }}>
             <Text style={{ fontSize: 12, color: isOverdue ? "#ff4d4f" : "#52c41a" }}>
-              {isOverdue ? "⚠️ Срок истёк" : "✅ В срок"}
+              {isOverdue ? "Срок истёк" : "В срок"}
             </Text>
             <Text strong style={{ fontSize: 12, color: isOverdue ? "#ff4d4f" : "#52c41a" }}>
               {new Date(task.dueDate).toLocaleDateString("ru-RU")}

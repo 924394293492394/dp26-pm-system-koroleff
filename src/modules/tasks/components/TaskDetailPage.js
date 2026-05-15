@@ -200,7 +200,7 @@ const TaskDetailPage = () => {
 
   return (
     <div>
-      {/* ── Хлебные крошки ── */}
+      {/* Хлебные крошки */}
       <Breadcrumb
         style={{ marginBottom: 16 }}
         items={[
@@ -211,7 +211,7 @@ const TaskDetailPage = () => {
         ]}
       />
 
-      {/* ── Шапка ── */}
+      {/* Шапка */}
       <div style={{
         background:   "#fff",
         borderRadius: 12,

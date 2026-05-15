@@ -69,7 +69,6 @@ const TaskAttachments = ({ projectId, taskId, currentUserId, currentUserRole, on
   const images = attachments.filter(a => a.mimeType?.startsWith("image/"));
   const files = attachments.filter(a => !a.mimeType?.startsWith("image/"));
 
-  // Суммарный размер для индикатора
   const totalBytes = attachments.reduce((sum, a) => sum + (a.fileSize || 0), 0);
   const totalMB = totalBytes / (1024 * 1024);
   const usedPct = Math.min(100, Math.round((totalMB / MAX_TOTAL_MB) * 100));

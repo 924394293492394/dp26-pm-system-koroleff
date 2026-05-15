@@ -27,6 +27,10 @@ import TaskDetailPage from "./modules/tasks/components/TaskDetailPage";
 import UsersPage from "./modules/users/UsersPage";
 import UserProfilePage from "./modules/users/UserProfilePage";
 import ProfilePage from "./modules/profile/ProfilePage";
+// ------------
+import VerifyEmailPage    from "./pages/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage  from "./pages/ResetPasswordPage";
 
 function AppInner() {
   const { setLoading } = useLoader();
@@ -80,6 +84,10 @@ function AppInner() {
               </PublicRoute>
             }
           />
+
+          <Route path="/verify-email"    element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
         </Routes>
       </Router>

@@ -10,6 +10,7 @@ import { getMyProfile, updateMyProfile, uploadAvatar, deleteAvatar } from "./api
 import { getAvatarSrc, getAvatarColor } from "../../utils/avatar";
 import { getRoleConfig } from "../../utils/roles";
 import ProfileDrawer from "./ProfileDrawer";
+import SecuritySection from "./SecuritySection";
 
 const { Title, Text } = Typography;
 
@@ -17,13 +18,13 @@ const { Title, Text } = Typography;
 const getOnlineStatus = (lastActiveAt) => {
   if (!lastActiveAt) return { label: "Не в сети", color: "#d9d9d9", dot: "default" };
   const diff = (Date.now() - new Date(lastActiveAt).getTime()) / 60000;
-  if (diff < 10) return { label: "Сейчас в сети",  color: "#52c41a", dot: "success" };
+  if (diff < 10) return { label: "Сейчас в сети", color: "#52c41a", dot: "success" };
   if (diff < 60) return { label: "Недавно был(а)", color: "#faad14", dot: "warning" };
   const h = Math.round(diff / 60), d = Math.floor(h / 24);
   return { label: `Был(а) ${d > 0 ? `${d} дн.` : `${h} ч.`} назад`, color: "#8c8c8c", dot: "default" };
 };
 
-// ── Карточка статистики ──────────────────────────────────
+// Карточка статистики
 const StatItem = ({ icon, label, value, color }) => (
   <div style={{
     display: "flex", alignItems: "center", gap: 12,
@@ -44,21 +45,21 @@ const StatItem = ({ icon, label, value, color }) => (
   </div>
 );
 
-// ── Основной компонент ───────────────────────────────────
+// Основной компонент
 const ProfilePage = () => {
   const { refreshUser } = useAuth();
-  const [profile,       setProfile]       = useState(null);
-  const [loading,       setLoading]       = useState(true);
-  const [drawerOpen,    setDrawerOpen]    = useState(false);
-  const [saving,        setSaving]        = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [hoverAvatar,   setHoverAvatar]   = useState(false);
+  const [hoverAvatar, setHoverAvatar] = useState(false);
   const fileInputRef = useRef(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const res  = await getMyProfile();
+      const res = await getMyProfile();
       setProfile(res?.data ?? res);
     } catch {
       message.error("Не удалось загрузить профиль");
@@ -67,9 +68,9 @@ const ProfilePage = () => {
     }
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => { load(); }, []);
 
-  // ── Сохранение данных профиля ──
+  // Сохранение данных профиля
   const handleSave = async (values) => {
     setSaving(true);
     try {
@@ -85,11 +86,11 @@ const ProfilePage = () => {
     }
   };
 
-  // ── Загрузка нового аватара ──
+  // Загрузка нового аватара
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024)  { message.error("Файл больше 5 МБ"); return; }
+    if (file.size > 5 * 1024 * 1024) { message.error("Файл больше 5 МБ"); return; }
     if (!file.type.startsWith("image/")) { message.error("Только изображения"); return; }
 
     setAvatarLoading(true);
@@ -106,7 +107,7 @@ const ProfilePage = () => {
     }
   };
 
-  // ── Удаление аватара ──
+  // Удаление аватара
   const handleAvatarDelete = async () => {
     setAvatarLoading(true);
     try {
@@ -127,12 +128,12 @@ const ProfilePage = () => {
   const displayName = profile.firstName
     ? `${profile.firstName} ${profile.lastName || ""}`.trim()
     : profile.login;
-  const initial    = (profile.login || "?")[0].toUpperCase();
-  const color      = getAvatarColor(profile.login);
-  const roleCfg    = getRoleConfig(profile.role);
-  const status     = getOnlineStatus(profile.lastActiveAt);
-  const avatarSrc  = getAvatarSrc(profile.avatarUrl);
-  const stats      = profile.stats || {};
+  const initial = (profile.login || "?")[0].toUpperCase();
+  const color = getAvatarColor(profile.login);
+  const roleCfg = getRoleConfig(profile.role);
+  const status = getOnlineStatus(profile.lastActiveAt);
+  const avatarSrc = getAvatarSrc(profile.avatarUrl);
+  const stats = profile.stats || {};
   const completion = stats.tasksAssignedCount
     ? Math.round((stats.tasksCompletedCount / stats.tasksAssignedCount) * 100)
     : 0;
@@ -147,8 +148,8 @@ const ProfilePage = () => {
         position: "relative",
       }}>
         {/* Декоративные круги */}
-        <div style={{ position:"absolute", right:-60, top:-60, width:200, height:200, borderRadius:"50%", background:"rgba(22,119,255,0.08)", pointerEvents:"none" }} />
-        <div style={{ position:"absolute", right:40, bottom:-80, width:150, height:150, borderRadius:"50%", background:"rgba(22,119,255,0.05)", pointerEvents:"none" }} />
+        <div style={{ position: "absolute", right: -60, top: -60, width: 200, height: 200, borderRadius: "50%", background: "rgba(22,119,255,0.08)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", right: 40, bottom: -80, width: 150, height: 150, borderRadius: "50%", background: "rgba(22,119,255,0.05)", pointerEvents: "none" }} />
 
         <div style={{ padding: "32px 36px", position: "relative" }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 24, flexWrap: "wrap" }}>
@@ -167,11 +168,11 @@ const ProfilePage = () => {
                       src={avatarSrc || undefined}
                       style={{
                         background: avatarSrc ? "transparent" : color,
-                        fontSize:   34,
+                        fontSize: 34,
                         fontWeight: 700,
                         lineHeight: "92px",
-                        border:     "3px solid rgba(255,255,255,0.15)",
-                        boxShadow:  "0 6px 20px rgba(0,0,0,0.3)",
+                        border: "3px solid rgba(255,255,255,0.15)",
+                        boxShadow: "0 6px 20px rgba(0,0,0,0.3)",
                         flexShrink: 0,
                       }}
                     >
@@ -203,7 +204,7 @@ const ProfilePage = () => {
               />
             </div>
 
-            {/* ── Имя, роль, статус ── */}
+            {/* Имя, роль, статус */}
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
                 <Title level={2} style={{ color: "#fff", margin: 0, fontSize: 26 }}>
@@ -303,28 +304,7 @@ const ProfilePage = () => {
               <LockOutlined style={{ color: "#1677ff", fontSize: 16 }} />
               <Text strong style={{ fontSize: 14 }}>Безопасность</Text>
             </div>
-
-            {[
-              { title: "Изменение пароля", desc: "Для обычных пользователей — через код на email. Для администраторов — без подтверждения.", sprint: "Sprint 6" },
-              { title: "Подтверждение Email", desc: "Обязательная верификация адреса после регистрации. Используется для восстановления доступа.", sprint: "Sprint 6" },
-            ].map(({ title, desc, sprint }) => (
-              <div key={title} style={{
-                display: "flex", alignItems: "flex-start", gap: 12,
-                padding: "14px 0", borderBottom: "1px solid #f5f5f5",
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 8, background: "#f0f5ff", flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <LockOutlined style={{ color: "#1677ff", fontSize: 15 }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <Text strong style={{ fontSize: 13, display: "block" }}>{title}</Text>
-                  <Text type="secondary" style={{ fontSize: 12, lineHeight: 1.5 }}>{desc}</Text>
-                </div>
-                <Tag color="default" style={{ flexShrink: 0 }}>{sprint}</Tag>
-              </div>
-            ))}
+            <SecuritySection profile={profile} />
           </div>
         </Col>
 
@@ -340,10 +320,10 @@ const ProfilePage = () => {
               <Text strong style={{ fontSize: 14 }}>Статистика</Text>
             </div>
 
-            <StatItem icon={<ProjectOutlined />}       label="Участие в проектах"  value={stats.projectsCount}        color="#1677ff" />
-            <StatItem icon={<CheckSquareOutlined />}   label="Задач назначено"      value={stats.tasksAssignedCount}   color="#722ed1" />
-            <StatItem icon={<TrophyOutlined />}        label="Задач выполнено"      value={stats.tasksCompletedCount}  color="#52c41a" />
-            <StatItem icon={<CommentOutlined />}       label="Комментариев"         value={stats.commentsCount}        color="#13c2c2" />
+            <StatItem icon={<ProjectOutlined />} label="Участие в проектах" value={stats.projectsCount} color="#1677ff" />
+            <StatItem icon={<CheckSquareOutlined />} label="Задач назначено" value={stats.tasksAssignedCount} color="#722ed1" />
+            <StatItem icon={<TrophyOutlined />} label="Задач выполнено" value={stats.tasksCompletedCount} color="#52c41a" />
+            <StatItem icon={<CommentOutlined />} label="Комментариев" value={stats.commentsCount} color="#13c2c2" />
 
             {/* Прогресс */}
             {stats.tasksAssignedCount > 0 && (

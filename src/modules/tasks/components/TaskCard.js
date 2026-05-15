@@ -175,53 +175,52 @@ const TaskCardStandard = ({ task, onClick, isBoard = false, projectId }) => {
     >
       {isDone && <DoneOverlay />}
 
-{/* Строка 1: статус + overdue + цель | кнопка страницы + приоритет */}
-<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-  <Space size={6} wrap>
-    <TaskStatusTag status={task.status} />
-    {isOverdue && (
-      <Tag color="error" style={{ margin: 0, fontSize: 11 }}>⏰ Просрочена</Tag>
-    )}
-    {task.goal && (
-      <Tag
-        color="blue"
-        style={{
-          margin: 0, fontSize: 11, maxWidth: 130,
-          overflow: "hidden", textOverflow: "ellipsis",
-          whiteSpace: "nowrap", verticalAlign: "middle",
-        }}
-        title={task.goal.title}
-      >
-        🎯 {task.goal.title}
-      </Tag>
-    )}
-  </Space>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <Space size={6} wrap>
+          <TaskStatusTag status={task.status} />
+          {isOverdue && (
+            <Tag color="error" style={{ margin: 0, fontSize: 11 }}>⏰ Просрочена</Tag>
+          )}
+          {task.goal && (
+            <Tag
+              color="blue"
+              style={{
+                margin: 0, fontSize: 11, maxWidth: 130,
+                overflow: "hidden", textOverflow: "ellipsis",
+                whiteSpace: "nowrap", verticalAlign: "middle",
+              }}
+              title={task.goal.title}
+            >
+              🎯 {task.goal.title}
+            </Tag>
+          )}
+        </Space>
 
-  {/* Правая часть: кнопка открытия страницы + приоритет */}
-  <Space size={4} style={{ flexShrink: 0 }}>
-    {projectId && (
-      <Tooltip title="Открыть страницу задачи">
-        <Button
-          type="text"
-          size="small"
-          icon={<ArrowsAltOutlined style={{ fontSize: 11 }} />}
-          onClick={e => {
-            e.stopPropagation();
-            navigate(`/projects/${projectId}/tasks/${task.id}`);
-          }}
-          style={{
-            width: 22, height: 22, padding: 0,
-            color: "#d9d9d9",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}
-          onMouseEnter={e => e.currentTarget.style.color = "#1677ff"}
-          onMouseLeave={e => e.currentTarget.style.color = "#d9d9d9"}
-        />
-      </Tooltip>
-    )}
-    <TaskPriorityBadge priority={task.priority} />
-  </Space>
-</div>
+        {/* Правая часть: кнопка открытия страницы + приоритет */}
+        <Space size={4} style={{ flexShrink: 0 }}>
+          {projectId && (
+            <Tooltip title="Открыть страницу задачи">
+              <Button
+                type="text"
+                size="small"
+                icon={<ArrowsAltOutlined style={{ fontSize: 11 }} />}
+                onClick={e => {
+                  e.stopPropagation();
+                  navigate(`/projects/${projectId}/tasks/${task.id}`);
+                }}
+                style={{
+                  width: 22, height: 22, padding: 0,
+                  color: "#d9d9d9",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = "#1677ff"}
+                onMouseLeave={e => e.currentTarget.style.color = "#d9d9d9"}
+              />
+            </Tooltip>
+          )}
+          <TaskPriorityBadge priority={task.priority} />
+        </Space>
+      </div>
 
       {/* Строка 2: название — макс 2 строки */}
       <Text strong style={{

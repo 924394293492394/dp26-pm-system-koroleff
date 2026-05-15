@@ -1,11 +1,10 @@
 import {
-  Typography, Row, Col, Card, Tag, Space, Avatar,
-  Tooltip, Progress, Skeleton, Badge, Empty, Button,
+  Typography, Row, Col, Tag, Space,
+  Progress, Skeleton, Badge, Empty, Button,
 } from "antd";
 import {
   CheckSquareOutlined, AimOutlined, ProjectOutlined,
-  ClockCircleOutlined, FireOutlined, RiseOutlined,
-  TrophyOutlined, CalendarOutlined, ArrowRightOutlined,
+  CalendarOutlined, ArrowRightOutlined,
   ExclamationCircleOutlined, TeamOutlined,
 } from "@ant-design/icons";
 import { useState, useEffect } from "react";
@@ -20,13 +19,6 @@ const PRIORITY_COLOR = {
   HIGH: "#fa8c16",
   MEDIUM: "#1677ff",
   LOW: "#8c8c8c",
-};
-
-const PRIORITY_LABEL = {
-  CRITICAL: "Критический",
-  HIGH: "Высокий",
-  MEDIUM: "Средний",
-  LOW: "Низкий",
 };
 
 const STATUS_COLOR = {
@@ -119,7 +111,7 @@ const TaskItem = ({ task, onClick }) => {
       onMouseEnter={e => e.currentTarget.style.background = "#f9fbff"}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
     >
-      {/* Индикатор приоритета */}
+      {/* инди приоритета */}
       <div style={{
         width: 4,
         height: 36,
@@ -253,7 +245,6 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Мини-статистика в шапке */}
         {data && (
           <div style={{ display: "flex", gap: 20, position: "relative" }}>
             {[

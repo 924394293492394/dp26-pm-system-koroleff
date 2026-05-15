@@ -1,160 +1,176 @@
-import {
-    Form,
-    Input,
-    Button,
-    Card,
-    message,
-    Typography
-} from "antd";
-import { useNavigate } from "react-router-dom";
-import { getErrorMessage } from "../utils/errorHandler";
+import { useState, useEffect } from "react";
+import { Form, Input, Button, Card, Typography, Spin, Result, message } from "antd";
 import { useAuth } from "../hooks/useAuth";
 import { Link } from "react-router-dom";
+import { resendVerificationRequest, getSystemStatusRequest } from "../api/authApi";
 import AuthLayout from "../components/layout/AuthLayout";
+import { MailOutlined } from "@ant-design/icons";
+import useResendCooldown from "../hooks/useResendCooldown";
+import { authStyles } from "../styles/authStyles";
 
 const { Title, Text } = Typography;
 
 const RegisterPage = () => {
-    const { register } = useAuth();
-    const navigate = useNavigate();
+  const { register } = useAuth();
+  const cooldown     = useResendCooldown(60, "resend_register_cooldown");
 
-    const onFinish = async (values) => {
-        try {
+  const [loading,      setLoading]      = useState(false);
+  const [registered,   setRegistered]   = useState("");
+  const [resending,    setResending]    = useState(false);
+  const [systemStatus, setSystemStatus] = useState(null);
 
-            await register({
-                login: values.login,
-                email: values.email,
-                firstName: values.firstName,
-                lastName: values.lastName,
-                password: values.password,
-            });
+  useEffect(() => {
+    getSystemStatusRequest()
+      .then((res) => setSystemStatus(res?.data ?? res))
+      .catch(()  => setSystemStatus({ registrationEnabled: true }));
+  }, []);
 
-            message.success("Регистрация успешна");
-            navigate("/login");
-        } catch (err) {
-            message.error(getErrorMessage(err));
-        }
-    };
+  const onFinish = async (values) => {
+    setLoading(true);
+    try {
+      await register({
+        login:     values.login,
+        email:     values.email,
+        firstName: values.firstName,
+        lastName:  values.lastName,
+        password:  values.password,
+      });
+      setRegistered(values.email);
+    } catch (err) {
+      message.error(
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.message ||
+        "Ошибка регистрации"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <AuthLayout>
-                <Card style={styles.card}>
-                    <div style={styles.header}>
-                        <Title level={2} style={{ marginBottom: 4 }}>
-                            PMS-26
-                        </Title>
-                        <Text type="secondary">
-                            Регистрация в системе
-                        </Text>
-                    </div>
+  const handleResend = async () => {
+    if (cooldown.isActive) return;
+    setResending(true);
+    try {
+      await resendVerificationRequest(registered);
+      message.success("Письмо отправлено — проверьте почту");
+    } catch (err) {
+      message.warning(err?.response?.data?.error?.message || "Попробуйте позже");
+    } finally {
+      setResending(false);
+      cooldown.start();
+    }
+  };
 
-                    <Form layout="vertical" onFinish={onFinish}>
-                        <Form.Item
-                            label="Логин"
-                            name="login"
-                            rules={[{ required: true, message: "Введите логин" }]}
-                        >
-                            <Input size="large" />
-                        </Form.Item>
+  if (!systemStatus) return (
+    <AuthLayout><Spin size="large" /></AuthLayout>
+  );
 
-                        <Form.Item
-                            label="Email"
-                            name="email"
-                            rules={[
-                                { required: true, message: "Введите email" },
-                                { type: "email", message: "Некорректный email" },
-                            ]}
-                        >
-                            <Input size="large" />
-                        </Form.Item>
+  if (registered) return (
+    <AuthLayout>
+      <Card style={authStyles.compactCard}>
+        <Result
+          icon={<MailOutlined style={{ color: "#1677ff", fontSize: authStyles.resultIcon.fontSize }} />}
+          title="Подтвердите email"
+          subTitle={
+            <Text style={authStyles.successText}>
+              Письмо отправлено на <b>{registered}</b>.<br />
+              Перейдите по ссылке для завершения регистрации.
+            </Text>
+          }
+          extra={
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+              <Button icon={<MailOutlined />} loading={resending}
+                disabled={cooldown.isActive} onClick={handleResend}
+                style={authStyles.secondaryButton}>
+                {cooldown.isActive ? `Повтор через ${cooldown.seconds}с` : "Отправить повторно"}
+              </Button>
+              <Link to="/login"><Button type="link">Вернуться ко входу</Button></Link>
+            </div>
+          }
+        />
+      </Card>
+    </AuthLayout>
+  );
 
-                        <Form.Item
-                            label="Имя"
-                            name="firstName"
-                            rules={[{ required: true, message: "Введите имя" }]}
-                        >
-                            <Input size="large" />
-                        </Form.Item>
+  if (!systemStatus.registrationEnabled) return (
+    <AuthLayout>
+      <Card style={authStyles.card}>
+        <div style={{ textAlign: "center", padding: "8px 0" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>🚫</div>
+          <Title level={3} style={{ marginBottom: 8 }}>Регистрация закрыта</Title>
+          <Text type="secondary">Регистрация новых пользователей временно отключена.</Text>
+          <div style={{ marginTop: 18 }}>
+            <Link to="/login">
+              <Button type="primary" block style={authStyles.primaryButton}>Войти</Button>
+            </Link>
+          </div>
+        </div>
+      </Card>
+    </AuthLayout>
+  );
 
-                        <Form.Item
-                            label="Фамилия"
-                            name="lastName"
-                            rules={[{ required: true, message: "Введите фамилию" }]}
-                        >
-                            <Input size="large" />
-                        </Form.Item>
+  return (
+    <AuthLayout>
+      <Card style={authStyles.card}>
+        <div style={authStyles.header}>
+          <Title level={2} style={authStyles.title}>PMS-26</Title>
+          <Text style={authStyles.subtitle}>Создание аккаунта</Text>
+        </div>
 
-                        <Form.Item
-                            label="Пароль"
-                            name="password"
-                            rules={[
-                                { required: true, message: "Введите пароль" },
-                                { min: 6, message: "Минимум 6 символов" },
-                            ]}
-                            hasFeedback
-                        >
-                            <Input.Password size="large" />
-                        </Form.Item>
+        <Form layout="vertical" onFinish={onFinish}>
+          <Form.Item label="Логин" name="login"
+            rules={[{ required: true, message: "Введите логин" }]}>
+            <Input size="large" style={authStyles.input} />
+          </Form.Item>
 
-                        <Form.Item
-                            label="Повторите пароль"
-                            name="confirmPassword"
-                            dependencies={["password"]}
-                            hasFeedback
-                            rules={[
-                                { required: true, message: "Подтвердите пароль" },
-                                ({ getFieldValue }) => ({
-                                    validator(_, value) {
-                                        if (!value || getFieldValue("password") === value) {
-                                            return Promise.resolve();
-                                        }
-                                        return Promise.reject(
-                                            new Error("Пароли не совпадают")
-                                        );
-                                    },
-                                }),
-                            ]}
-                        >
-                            <Input.Password size="large" />
-                        </Form.Item>
+          <Form.Item label="Email" name="email"
+            rules={[{ required: true, message: "Введите email" }, { type: "email", message: "Некорректный email" }]}>
+            <Input size="large" style={authStyles.input} />
+          </Form.Item>
 
-                        <Button type="primary" htmlType="submit" block size="large">
-                            Зарегистрироваться
-                        </Button>
+          <Form.Item label="Имя" name="firstName"
+            rules={[{ required: true, message: "Введите имя" }]}>
+            <Input size="large" style={authStyles.input} />
+          </Form.Item>
 
-                        <div style={styles.footer}>
-                            <Text type="secondary">
-                                Уже есть аккаунт?{" "}
-                                <Link to="/login">
-                                    Войти в систему
-                                </Link>
-                            </Text>
-                        </div>
-                    </Form>
-                </Card>
-        </AuthLayout>
-    );
-};
+          <Form.Item label="Фамилия" name="lastName"
+            rules={[{ required: true, message: "Введите фамилию" }]}>
+            <Input size="large" style={authStyles.input} />
+          </Form.Item>
 
-const styles = {
+          <Form.Item label="Пароль" name="password" hasFeedback
+            rules={[{ required: true, message: "Введите пароль" }, { min: 6, message: "Минимум 6 символов" }]}>
+            <Input.Password size="large" style={authStyles.input} />
+          </Form.Item>
 
-    card: {
-        width: 530,
-        padding: "16px 35px",
-        borderRadius: 32,
-        zIndex: 1,
-        boxShadow: "0 6px 20px rgba(0,0,0,0.85)",
-    },
+          <Form.Item label="Повторите пароль" name="confirmPassword"
+            dependencies={["password"]} hasFeedback
+            rules={[
+              { required: true, message: "Подтвердите пароль" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue("password") === value) return Promise.resolve();
+                  return Promise.reject(new Error("Пароли не совпадают"));
+                },
+              }),
+            ]}>
+            <Input.Password size="large" style={authStyles.input} />
+          </Form.Item>
 
-    header: {
-        textAlign: "center",
-        marginBottom: 12,
-    },
+          <Button type="primary" htmlType="submit" block size="large"
+            loading={loading} style={authStyles.primaryButton}>
+            Зарегистрироваться
+          </Button>
 
-    footer: {
-        marginTop: 16,
-        textAlign: "center",
-    },
+          <div style={authStyles.footer}>
+            <Text type="secondary">
+              Уже есть аккаунт? <Link to="/login">Войти</Link>
+            </Text>
+          </div>
+        </Form>
+      </Card>
+    </AuthLayout>
+  );
 };
 
 export default RegisterPage;

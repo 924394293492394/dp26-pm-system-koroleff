@@ -23,3 +23,15 @@ export const uploadAvatar = async (file) => {
   });
   return res.data;
 };
+
+// запросить OTP-код на email (только для USER)
+export const requestPasswordOtp = async () => {
+  const res = await api.post("/profile/request-otp");
+  return res.data;
+};
+
+// сменить пароль через профиль(USER: нужен otp, ADMIN: без otp)
+export const changePassword = async (data) => {
+  const res = await api.post("/profile/change-password", data);
+  return res.data;
+};
